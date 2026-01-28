@@ -78,7 +78,7 @@ def _create_file_import_command(name: str, module_name: str, class_name: str, do
     """Create a file-based import command."""
 
     @import_cmd.command(name=name)
-    @click.argument("file_path", type=click.Path(exists=True, path_type=Path))
+    @click.argument("file_path", type=click.Path(exists=True, path_type=Path), required=False)
     @click.option("--help-setup", is_flag=True, help="Show setup instructions")
     @click.pass_context
     def import_source(ctx: click.Context, file_path: Path | None, help_setup: bool) -> None:
