@@ -42,7 +42,15 @@ Analyze patterns in the user's loved items:
 
 ### 2. Personalized Recommendations
 
-Use web search to find new recommendations based on their taste:
+Combine your own knowledge with web search to find recommendations:
+
+**Use your knowledge first:**
+- Draw on your understanding of genres, themes, and stylistic elements
+- Recall similar works, influences, and connections between creators
+- Consider critical consensus and cult favorites in relevant categories
+- Think about thematic links (e.g., if they love existential games, suggest existential films)
+
+**Then supplement with web search:**
 - Search for "similar to [loved item]" recommendations
 - Look for "if you liked X you'll love Y" lists
 - Find critically acclaimed items matching their preferred genres
@@ -65,7 +73,8 @@ Use web search to find recent and upcoming releases:
 ### 4. Similar Items
 
 When the user asks about something specific:
-- Search for similar items using web search
+- First, use your knowledge of the item's genre, themes, and style
+- Then search for similar items using web search
 - Find "fans also like" recommendations
 - Look for items by the same creator
 - Find items in the same series or universe
