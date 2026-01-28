@@ -355,6 +355,8 @@ class TestQueryCommand:
         assert "total" in data
         assert "items" in data
         assert len(data["items"]) == 1
+        assert "sources" in data["items"][0]
+        assert "category" in data["items"][0]
 
     def test_query_search(self, runner: CliRunner, cli_db: Database):
         cli_db.upsert_item(Item(id="1", category=Category.GAME, title="Dark Souls"))
@@ -375,6 +377,18 @@ class TestQueryCommand:
         assert result.exit_code == 0
         assert "Elden Ring" in result.output
         assert "Zelda" not in result.output
+
+    def test_query_shows_sources(self, runner: CliRunner, cli_db: Database):
+        from discovery.models import ItemSource, Source
+
+        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song"))
+        cli_db.upsert_item_source(ItemSource(item_id="1", source=Source.SPOTIFY, source_id="123"))
+
+        result = runner.invoke(cli, ["query"])
+
+        assert result.exit_code == 0
+        assert "[spotify" in result.output
+        assert "Test Song" in result.output
 
 
 class TestImportCommands:

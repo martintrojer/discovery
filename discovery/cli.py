@@ -715,6 +715,7 @@ def query(
                     "category": item.category.value,
                     "title": item.title,
                     "creator": item.creator,
+                    "sources": [s.source.value for s in db.get_item_sources(item.id)],
                     "metadata": item.metadata,
                 }
                 for item in items
@@ -728,8 +729,10 @@ def query(
 
         click.echo(f"\nShowing {len(items)} of {total} items (offset: {offset}):\n")
         for item in items:
+            sources = db.get_item_sources(item.id)
+            source_str = ",".join(s.source.value for s in sources) if sources else "manual"
             creator_str = f" - {item.creator}" if item.creator else ""
-            click.echo(f"  [{item.category.value:7}] {item.title}{creator_str}")
+            click.echo(f"  [{item.category.value:7}] [{source_str:10}] {item.title}{creator_str}")
 
         if offset + len(items) < total:
             next_offset = offset + limit
