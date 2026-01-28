@@ -132,15 +132,15 @@ def import_steam(
         click.echo(importer.get_manual_steps())
         return
 
-    _create_backup_before_import(db, "steam")
-
     if file_path:
+        _create_backup_before_import(db, "steam")
         result = importer.import_from_file(file_path)
     else:
         if not api_key or not steam_id:
             click.echo("Error: --api-key and --steam-id required for API import.")
             click.echo("Run 'discovery import steam --help-setup' for instructions.")
             sys.exit(1)
+        _create_backup_before_import(db, "steam")
         result = importer.import_from_api()
 
     _print_import_result(result)
