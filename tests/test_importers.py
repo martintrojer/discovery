@@ -61,6 +61,31 @@ class TestNormalizationUtilities:
         assert titles_match(None, "Test") is False
         assert titles_match("Test", None) is False
 
+    def test_titles_match_numbered_sequels(self):
+        # Same base title with different numbering
+        assert titles_match("Mass Effect 2", "Mass Effect 3") is True
+        assert titles_match("Final Fantasy VII", "Final Fantasy X") is True
+        assert titles_match("Dark Souls II", "Dark Souls III") is True
+
+    def test_titles_match_fuzzy_typos(self):
+        # Fuzzy matching catches typos
+        assert titles_match("The Witcher", "The Witchar") is True
+        assert titles_match("Assassin's Creed", "Assassins Creed") is True
+
+    def test_titles_match_fuzzy_threshold(self):
+        # Very different titles should not match
+        assert titles_match("Dark Souls", "Light Hearts") is False
+        assert titles_match("The Matrix", "Frozen") is False
+
+    def test_creators_match_fuzzy_typos(self):
+        # Fuzzy matching catches typos in creator names
+        assert creators_match("Christopher Nolan", "Cristopher Nolan") is True
+        assert creators_match("FromSoftware", "From Software") is True
+
+    def test_creators_match_different(self):
+        # Very different creators should not match
+        assert creators_match("Steven Spielberg", "Martin Scorsese") is False
+
     def test_creators_match_exact(self):
         assert creators_match("John Smith", "John Smith") is True
         assert creators_match("John Smith", "john smith") is True

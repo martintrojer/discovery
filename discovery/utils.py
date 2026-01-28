@@ -2,6 +2,8 @@
 
 import re
 
+from rapidfuzz import fuzz
+
 
 def normalize_title(title: str, strip_editions: bool = True) -> str:
     """Normalize a title for comparison.
@@ -43,12 +45,18 @@ def normalize_title(title: str, strip_editions: bool = True) -> str:
     return normalized.strip()
 
 
-def titles_match(title1: str | None, title2: str | None) -> bool:
+def titles_match(title1: str | None, title2: str | None, threshold: int = 85) -> bool:
     """Check if two titles match using fuzzy comparison.
+
+    Uses a combination of:
+    - Exact normalized match (fast path)
+    - Pattern-based matching for common TV/movie/game patterns
+    - Fuzzy matching via rapidfuzz for everything else
 
     Args:
         title1: First title
         title2: Second title
+        threshold: Minimum fuzzy match score (0-100) for non-exact matches
 
     Returns:
         True if titles are considered a match
@@ -59,26 +67,54 @@ def titles_match(title1: str | None, title2: str | None) -> bool:
     norm1 = normalize_title(title1)
     norm2 = normalize_title(title2)
 
-    # Exact normalized match
+    # Exact normalized match (fast path)
     if norm1 == norm2:
         return True
 
-    # One is substring of other (for titles with subtitles)
+    # Pattern-based matching for common cases:
+
+    # 1. Subtitle handling: "Dark Souls" matches "Dark Souls III"
+    #    One is substring of other (for titles with subtitles/sequels)
     if norm1 in norm2 or norm2 in norm1:
-        # Only if the shorter one is substantial
         shorter = min(len(norm1), len(norm2))
         if shorter >= 5:
             return True
 
+    # 2. Numbered sequels: "Mass Effect 2" vs "Mass Effect II"
+    #    Remove numbers and roman numerals for comparison
+    def strip_numbers(s: str) -> str:
+        # Remove trailing numbers and roman numerals
+        s = re.sub(r"\s+[ivxlcdm]+$", "", s, flags=re.IGNORECASE)
+        s = re.sub(r"\s+\d+$", "", s)
+        return s.strip()
+
+    stripped1 = strip_numbers(norm1)
+    stripped2 = strip_numbers(norm2)
+    if stripped1 and stripped2 and stripped1 == stripped2:
+        return True
+
+    # 3. Fuzzy matching with rapidfuzz for typos and variations
+    #    token_set_ratio handles word order and extra words well
+    score = fuzz.token_set_ratio(norm1, norm2)
+    if score >= threshold:
+        return True
+
     return False
 
 
-def creators_match(creator1: str | None, creator2: str | None) -> bool:
+def creators_match(creator1: str | None, creator2: str | None, threshold: int = 80) -> bool:
     """Check if two creators match using fuzzy comparison.
+
+    Uses a combination of:
+    - Exact match
+    - Substring matching (handles "John Smith" vs "Smith, John")
+    - Last name matching
+    - Fuzzy matching via rapidfuzz for typos
 
     Args:
         creator1: First creator
         creator2: Second creator
+        threshold: Minimum fuzzy match score (0-100) for non-exact matches
 
     Returns:
         True if creators are considered a match (missing creator = match)
@@ -104,6 +140,11 @@ def creators_match(creator1: str | None, creator2: str | None) -> bool:
     if parts1 and parts2:
         if parts1[-1] == parts2[-1]:  # Same last name
             return True
+
+    # Fuzzy matching for typos and variations
+    score = fuzz.ratio(c1, c2)
+    if score >= threshold:
+        return True
 
     return False
 
