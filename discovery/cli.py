@@ -390,37 +390,6 @@ def _find_similar_items(db: Database, title: str, category: Category, creator: s
 
 @cli.command()
 @click.argument("query")
-@click.option("--category", "-c", type=click.Choice([c.value for c in Category]), help="Filter by category")
-@click.option("--loved", "-l", is_flag=True, help="Show only loved items")
-@click.pass_context
-def search(
-    ctx: click.Context,
-    query: str,
-    category: str | None,
-    loved: bool,
-) -> None:
-    """Search your library."""
-    db: Database = ctx.obj["db"]
-
-    cat = Category(category) if category else None
-    items = db.search_items(query, category=cat, loved_only=loved)
-
-    if not items:
-        click.echo("No items found.")
-        return
-
-    click.echo(f"\nFound {len(items)} items:\n")
-    for item in items[:20]:
-        creator_str = f" - {item.creator}" if item.creator else ""
-        click.echo(f"  [{item.category.value:6}] {item.title}{creator_str}")
-
-    if len(items) > 20:
-        click.echo(f"\n  ... and {len(items) - 20} more")
-    click.echo()
-
-
-@cli.command()
-@click.argument("query")
 @click.option("--title", "-t", help="New title")
 @click.option("--creator", "-a", help="New creator")
 @click.option("--loved", "-l", is_flag=True, help="Mark as loved")

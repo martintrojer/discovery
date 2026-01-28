@@ -41,7 +41,7 @@ uv run discovery query -s "dark souls" -f json    # Search as JSON
 
 ## Query Command Reference
 
-The `query` command provides flexible access to the library:
+The `query` command is the primary way to explore the library.
 
 **Filters:**
 - `-c, --category` - Filter by category (music, game, book, movie, tv, podcast, paper)

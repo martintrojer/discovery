@@ -133,14 +133,17 @@ discovery loved              # List all loved items
 discovery loved -c game      # Filter by category
 discovery disliked           # List all disliked items
 discovery disliked -c movie  # Filter by category
-discovery search "souls"     # Search library
 ```
 
 ### Query Library
 
-For large libraries or detailed exploration, use the `query` command:
+For searching, filtering, and exploring large libraries use the `query` command:
 
 ```bash
+# Search
+discovery query -s "souls"                 # Search title/creator
+discovery query -s "souls" -c game         # Search within category
+
 # Get counts
 discovery query --count                    # Total items
 discovery query -c game --count            # Total games
@@ -153,8 +156,7 @@ discovery query -c game -l -n 100          # First 100 loved games
 discovery query -a "FromSoftware" -l       # Loved items by creator
 discovery query --min-rating 4             # Items rated 4+
 discovery query -c movie -r -n 10          # 10 random movies
-discovery query -s "dark souls"            # Search title/creator
-discovery query -s "souls" -f json         # Search as JSON
+discovery query -f json                    # JSON output
 ```
 
 ### Backups

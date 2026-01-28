@@ -129,35 +129,6 @@ class TestAddCommand:
         assert len(items) == 2
 
 
-class TestSearchCommand:
-    def test_search_finds_items(self, runner: CliRunner, cli_db: Database):
-        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Dark Side of the Moon", creator="Pink Floyd"))
-        cli_db.upsert_item(Item(id="2", category=Category.GAME, title="Dark Souls"))
-
-        result = runner.invoke(cli, ["search", "dark"])
-
-        assert result.exit_code == 0
-        assert "Found 2 items" in result.output
-        assert "Dark Side of the Moon" in result.output
-        assert "Dark Souls" in result.output
-
-    def test_search_no_results(self, runner: CliRunner, cli_db: Database):
-        result = runner.invoke(cli, ["search", "nonexistent"])
-
-        assert result.exit_code == 0
-        assert "No items found" in result.output
-
-    def test_search_filter_by_category(self, runner: CliRunner, cli_db: Database):
-        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Dark Song"))
-        cli_db.upsert_item(Item(id="2", category=Category.GAME, title="Dark Souls"))
-
-        result = runner.invoke(cli, ["search", "dark", "-c", "game"])
-
-        assert result.exit_code == 0
-        assert "Dark Souls" in result.output
-        assert "Dark Song" not in result.output
-
-
 class TestUpdateCommand:
     def test_update_creator(self, runner: CliRunner, cli_db: Database):
         cli_db.upsert_item(Item(id="1", category=Category.GAME, title="Elden Ring"))
