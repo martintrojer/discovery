@@ -126,11 +126,19 @@ Option 3: Browser export (advanced)
 
         for track in tracks:
             if isinstance(track, dict):
-                title = track.get("title", track.get("name", ""))
-                artist = track.get("artist", track.get("performer", {}).get("name", ""))
+                title = track.get("title") or track.get("name", "")
+
+                artist = track.get("artist")
+                if not artist:
+                    performer = track.get("performer")
+                    if isinstance(performer, dict):
+                        artist = performer.get("name", "")
+                    elif isinstance(performer, str):
+                        artist = performer
                 if isinstance(artist, dict):
                     artist = artist.get("name", "")
-                album = track.get("album", track.get("album", {}).get("title", ""))
+
+                album = track.get("album")
                 if isinstance(album, dict):
                     album = album.get("title", "")
             else:
