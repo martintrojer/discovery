@@ -65,9 +65,9 @@ The `query` command is the primary way to explore the library.
 
 1. Run `discovery status` for overview and sample loved items
 2. Check sizes: `discovery query -l --count`
-3. If > 200 loved items, paginate: `discovery query -l -n 100` then `--offset 100`
+3. If > 200 loved items, prefer random sampling with a size limit: `discovery query -l -r -n 100`
 4. Use category filters to focus: `discovery query -c game -l`
-5. Use random samples for variety: `discovery query -c music -l -r -n 20`
+5. When a size limit is required for loved items, use random sampling: `discovery query -c music -l -r -n 20`
 
 ## Available Actions
 
