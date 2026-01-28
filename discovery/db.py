@@ -483,3 +483,162 @@ class Database:
         """).fetchall()
 
         return {r[0]: r[1] for r in results}
+
+    # Advanced query operations
+
+    def count_items(
+        self,
+        category: Category | None = None,
+        loved: bool | None = None,
+        creator: str | None = None,
+        min_rating: int | None = None,
+        max_rating: int | None = None,
+        search: str | None = None,
+    ) -> int:
+        """Count items matching filters.
+
+        Args:
+            category: Filter by category
+            loved: Filter by loved status (True=loved, False=disliked, None=any)
+            creator: Filter by creator (partial match)
+            min_rating: Minimum rating (1-5)
+            max_rating: Maximum rating (1-5)
+            search: Search term for title/creator
+
+        Returns:
+            Count of matching items
+        """
+        sql = """
+            SELECT COUNT(DISTINCT i.id)
+            FROM items i
+            LEFT JOIN ratings r ON i.id = r.item_id
+            LEFT JOIN item_sources s ON i.id = s.item_id
+            WHERE 1=1
+        """
+        params: list[Any] = []
+
+        if category:
+            sql += " AND i.category = ?"
+            params.append(category.value)
+
+        if loved is True:
+            sql += " AND (r.loved = TRUE OR s.source_loved = TRUE)"
+        elif loved is False:
+            sql += " AND r.loved = FALSE"
+
+        if creator:
+            sql += " AND i.creator ILIKE ?"
+            params.append(f"%{creator}%")
+
+        if min_rating:
+            sql += " AND r.rating >= ?"
+            params.append(min_rating)
+
+        if max_rating:
+            sql += " AND r.rating <= ?"
+            params.append(max_rating)
+
+        if search:
+            sql += " AND (i.title ILIKE ? OR i.creator ILIKE ?)"
+            params.extend([f"%{search}%", f"%{search}%"])
+
+        result = self.conn.execute(sql, params).fetchone()
+        return result[0] if result else 0
+
+    def query_items(
+        self,
+        category: Category | None = None,
+        loved: bool | None = None,
+        creator: str | None = None,
+        min_rating: int | None = None,
+        max_rating: int | None = None,
+        search: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+        random: bool = False,
+    ) -> list[Item]:
+        """Query items with filters and pagination.
+
+        Args:
+            category: Filter by category
+            loved: Filter by loved status (True=loved, False=disliked, None=any)
+            creator: Filter by creator (partial match)
+            min_rating: Minimum rating (1-5)
+            max_rating: Maximum rating (1-5)
+            search: Search term for title/creator
+            limit: Maximum items to return
+            offset: Number of items to skip
+            random: Return random sample instead of sorted
+
+        Returns:
+            List of matching items
+        """
+        sql = """
+            SELECT DISTINCT i.id, i.category, i.title, i.creator, i.metadata, i.created_at, i.updated_at
+            FROM items i
+            LEFT JOIN ratings r ON i.id = r.item_id
+            LEFT JOIN item_sources s ON i.id = s.item_id
+            WHERE 1=1
+        """
+        params: list[Any] = []
+
+        if category:
+            sql += " AND i.category = ?"
+            params.append(category.value)
+
+        if loved is True:
+            sql += " AND (r.loved = TRUE OR s.source_loved = TRUE)"
+        elif loved is False:
+            sql += " AND r.loved = FALSE"
+
+        if creator:
+            sql += " AND i.creator ILIKE ?"
+            params.append(f"%{creator}%")
+
+        if min_rating:
+            sql += " AND r.rating >= ?"
+            params.append(min_rating)
+
+        if max_rating:
+            sql += " AND r.rating <= ?"
+            params.append(max_rating)
+
+        if search:
+            sql += " AND (i.title ILIKE ? OR i.creator ILIKE ?)"
+            params.extend([f"%{search}%", f"%{search}%"])
+
+        if random:
+            sql += " ORDER BY RANDOM()"
+        else:
+            sql += " ORDER BY i.title"
+
+        if limit:
+            sql += f" LIMIT {limit}"
+        if offset:
+            sql += f" OFFSET {offset}"
+
+        results = self.conn.execute(sql, params).fetchall()
+        return [self._row_to_item(r) for r in results]
+
+    def get_random_sample(
+        self,
+        count: int = 10,
+        category: Category | None = None,
+        loved: bool | None = None,
+    ) -> list[Item]:
+        """Get a random sample of items.
+
+        Args:
+            count: Number of items to return
+            category: Filter by category
+            loved: Filter by loved status
+
+        Returns:
+            Random sample of items
+        """
+        return self.query_items(
+            category=category,
+            loved=loved,
+            limit=count,
+            random=True,
+        )

@@ -51,10 +51,10 @@ Tests use temporary DuckDB databases that are automatically cleaned up.
 
 - `discovery/` - Main package
   - `cli.py` - CLI commands (uses factory pattern for import commands)
-  - `db.py` - DuckDB storage layer (supports context manager)
+  - `db.py` - DuckDB storage layer (supports context manager, advanced query methods)
   - `models.py` - Data models (Category, Source, Item, Rating, etc.)
-  - `utils.py` - Shared utilities (normalize_title, format_rating, etc.)
-  - `export.py` - Export for Claude Code skill
+  - `utils.py` - Shared utilities (normalize_title, format_rating, fuzzy matching)
+  - `status.py` - Status and summary functions for library overview
   - `importers/` - Data importers
     - `base.py` - BaseImporter class
     - `spotify.py`, `netflix.py`, `steam.py`, etc.
@@ -62,12 +62,12 @@ Tests use temporary DuckDB databases that are automatically cleaned up.
   - `conftest.py` - Shared pytest fixtures
   - `test_models.py` - Unit tests for data models
   - `test_db.py` - Unit tests for database layer
-  - `test_export.py` - Unit tests for export functions
+  - `test_status.py` - Unit tests for status functions
   - `test_importers.py` - Unit tests for importers and utilities
   - `test_cli.py` - Integration tests for CLI
   - `test_deduplication.py` - Tests for deduplication logic
   - `test_backup.py` - Tests for backup functionality
-- `.claude/skills/discovery.md` - Claude Code skill for AI analysis
+- `.claude/skills/discovery/SKILL.md` - Claude Code skill for AI analysis
 
 ### Adding New Importers
 
@@ -79,4 +79,4 @@ Tests use temporary DuckDB databases that are automatically cleaned up.
 
 ### Claude Code Integration
 
-The `/discovery` skill uses `discovery export` output for AI-powered analysis. No external API keys needed.
+The `/discovery` skill uses `discovery status` and `discovery query` for AI-powered analysis. No external API keys needed.

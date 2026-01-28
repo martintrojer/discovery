@@ -25,32 +25,28 @@ def cli(ctx: click.Context) -> None:
 
 
 @cli.command()
+@click.option("--format", "-f", type=click.Choice(["text", "json"]), default="text", help="Output format")
 @click.pass_context
-def status(ctx: click.Context) -> None:
-    """Show current library status."""
+def status(ctx: click.Context, format: str) -> None:
+    """Show library status and summary.
+
+    Provides an overview for AI analysis including:
+    - Category breakdown (total, loved, disliked)
+    - Source breakdown
+    - Sample loved items per category
+    """
+    from .status import format_status_text, get_library_status
+
     db: Database = ctx.obj["db"]
 
-    click.echo("\nDiscovery Library Status\n")
+    if format == "json":
+        import json as json_module
 
-    # Category stats
-    cat_stats = db.get_category_stats()
-    if cat_stats:
-        click.echo("By Category:")
-        for cat, stats in sorted(cat_stats.items()):
-            loved_pct = (stats["loved"] / stats["total"] * 100) if stats["total"] > 0 else 0
-            click.echo(f"  {cat:10} {stats['total']:5} items ({stats['loved']} loved, {loved_pct:.0f}%)")
+        data = get_library_status(db)
+        click.echo(json_module.dumps(data, indent=2, default=str))
     else:
-        click.echo("  No items yet. Run 'discovery import --help' to get started.")
-
-    # Source stats
-    source_stats = db.get_source_stats()
-    if source_stats:
-        click.echo("\nBy Source:")
-        for source, count in sorted(source_stats.items()):
-            click.echo(f"  {source:15} {count:5} items")
-
-    click.echo("\nUse 'discovery export' then /discovery skill for AI analysis.")
-    click.echo()
+        content = format_status_text(db)
+        click.echo(content)
 
 
 @cli.group(name="import")
@@ -636,35 +632,140 @@ def disliked(ctx: click.Context, category: str | None) -> None:
 
 
 @cli.command()
-@click.option("--format", "-f", type=click.Choice(["text", "json"]), default="text", help="Export format")
-@click.option("--output", "-o", type=click.Path(path_type=Path), help="Output file (default: stdout)")
-@click.option(
-    "--category",
-    "-c",
-    type=click.Choice([c.value for c in Category]),
-    help="Filter by category",
-)
+@click.option("--category", "-c", type=click.Choice([c.value for c in Category]), help="Filter by category")
+@click.option("--loved", "-l", is_flag=True, help="Show only loved items")
+@click.option("--disliked", "-d", is_flag=True, help="Show only disliked items")
+@click.option("--creator", "-a", help="Filter by creator (partial match)")
+@click.option("--min-rating", type=click.IntRange(1, 5), help="Minimum rating (1-5)")
+@click.option("--max-rating", type=click.IntRange(1, 5), help="Maximum rating (1-5)")
+@click.option("--search", "-s", help="Search title/creator")
+@click.option("--limit", "-n", type=int, default=20, help="Max items to show (default: 20)")
+@click.option("--offset", type=int, default=0, help="Skip first N items (for pagination)")
+@click.option("--random", "-r", is_flag=True, help="Random sample instead of sorted")
+@click.option("--count", is_flag=True, help="Show only count, not items")
+@click.option("--format", "-f", type=click.Choice(["text", "json"]), default="text", help="Output format")
 @click.pass_context
-def export(ctx: click.Context, format: str, output: Path | None, category: str | None) -> None:
-    """Export library for Claude Code /discovery skill."""
-    from .export import export_library_json, export_library_summary
+def query(
+    ctx: click.Context,
+    category: str | None,
+    loved: bool,
+    disliked: bool,
+    creator: str | None,
+    min_rating: int | None,
+    max_rating: int | None,
+    search: str | None,
+    limit: int,
+    offset: int,
+    random: bool,
+    count: bool,
+    format: str,
+) -> None:
+    """Query library with filters and pagination.
+
+    Examples:
+
+      discovery query --count                    # Total items
+      discovery query -c game --count            # Total games
+      discovery query -l --count                 # Total loved items
+      discovery query -c music -l -n 50          # First 50 loved music items
+      discovery query -c game -l --offset 50    # Next 50 (pagination)
+      discovery query -a "FromSoftware" -l       # Loved items by creator
+      discovery query --min-rating 4             # Items rated 4+
+      discovery query -c movie -r -n 10          # 10 random movies
+      discovery query -s "souls" -f json         # Search as JSON
+    """
+    import json as json_module
 
     db: Database = ctx.obj["db"]
     cat = Category(category) if category else None
+    loved_filter = True if loved else (False if disliked else None)
+
+    if count:
+        total = db.count_items(
+            category=cat,
+            loved=loved_filter,
+            creator=creator,
+            min_rating=min_rating,
+            max_rating=max_rating,
+            search=search,
+        )
+        if format == "json":
+            click.echo(json_module.dumps({"count": total}))
+        else:
+            # Build filter description
+            filters = []
+            if category:
+                filters.append(category)
+            if loved:
+                filters.append("loved")
+            if disliked:
+                filters.append("disliked")
+            if creator:
+                filters.append(f"creator: {creator}")
+            if min_rating:
+                filters.append(f"rating >= {min_rating}")
+            if max_rating:
+                filters.append(f"rating <= {max_rating}")
+            if search:
+                filters.append(f"search: {search}")
+
+            filter_str = f" ({', '.join(filters)})" if filters else ""
+            click.echo(f"Count{filter_str}: {total}")
+        return
+
+    items = db.query_items(
+        category=cat,
+        loved=loved_filter,
+        creator=creator,
+        min_rating=min_rating,
+        max_rating=max_rating,
+        search=search,
+        limit=limit,
+        offset=offset,
+        random=random,
+    )
+
+    # Get total for pagination info
+    total = db.count_items(
+        category=cat,
+        loved=loved_filter,
+        creator=creator,
+        min_rating=min_rating,
+        max_rating=max_rating,
+        search=search,
+    )
 
     if format == "json":
-        import json as json_module
-
-        data = export_library_json(db, output, cat)
-        if not output:
-            click.echo(json_module.dumps(data, indent=2, default=str))
+        data = {
+            "total": total,
+            "offset": offset,
+            "limit": limit,
+            "items": [
+                {
+                    "id": item.id,
+                    "category": item.category.value,
+                    "title": item.title,
+                    "creator": item.creator,
+                    "metadata": item.metadata,
+                }
+                for item in items
+            ],
+        }
+        click.echo(json_module.dumps(data, indent=2, default=str))
     else:
-        content = export_library_summary(db, output, cat)
-        if not output:
-            click.echo(content)
+        if not items:
+            click.echo("No items found.")
+            return
 
-    if output:
-        click.echo(f"Exported to {output}")
+        click.echo(f"\nShowing {len(items)} of {total} items (offset: {offset}):\n")
+        for item in items:
+            creator_str = f" - {item.creator}" if item.creator else ""
+            click.echo(f"  [{item.category.value:7}] {item.title}{creator_str}")
+
+        if offset + len(items) < total:
+            next_offset = offset + limit
+            click.echo(f"\n  Use --offset {next_offset} to see more")
+        click.echo()
 
 
 @cli.group()

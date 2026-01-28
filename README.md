@@ -127,6 +127,8 @@ discovery update "Some Movie" -u        # Remove loved/disliked status
 ### View Library
 
 ```bash
+discovery status            # Full overview with sample loved items
+discovery status -f json    # JSON format
 discovery loved              # List all loved items
 discovery loved -c game      # Filter by category
 discovery disliked           # List all disliked items
@@ -134,13 +136,25 @@ discovery disliked -c movie  # Filter by category
 discovery search "souls"     # Search library
 ```
 
-### Export for Analysis
+### Query Library
+
+For large libraries or detailed exploration, use the `query` command:
 
 ```bash
-discovery export             # Text format to stdout
-discovery export -c game     # Filter by category
-discovery export -f json     # JSON format
-discovery export -o lib.txt  # Save to file
+# Get counts
+discovery query --count                    # Total items
+discovery query -c game --count            # Total games
+discovery query -l --count                 # Total loved items
+
+# Query with filters and pagination
+discovery query -l -n 50                   # First 50 loved items
+discovery query -l --offset 50 -n 50       # Next 50 loved items
+discovery query -c game -l -n 100          # First 100 loved games
+discovery query -a "FromSoftware" -l       # Loved items by creator
+discovery query --min-rating 4             # Items rated 4+
+discovery query -c movie -r -n 10          # 10 random movies
+discovery query -s "dark souls"            # Search title/creator
+discovery query -s "souls" -f json         # Search as JSON
 ```
 
 ### Backups

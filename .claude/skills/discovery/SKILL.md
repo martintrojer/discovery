@@ -10,25 +10,64 @@ Analyze the user's media library and provide personalized recommendations across
 
 ## Setup
 
-First, get the current library state:
+First, get an overview of the library:
 
 ```bash
-uv run discovery export                 # Export all categories
-uv run discovery export -c game         # Export only games
-uv run discovery export -c music        # Export only music
-uv run discovery export -c book         # Export only books
-uv run discovery export -c movie        # Export only movies
-uv run discovery export -c tv           # Export only TV shows
-uv run discovery export -c podcast      # Export only podcasts
-uv run discovery export -c paper        # Export only academic papers
+uv run discovery status              # Full overview with sample loved items
+uv run discovery status -f json      # JSON format for programmatic use
 ```
 
-This outputs the library in a readable format. Read this output to understand what the user has consumed and loved.
+The status command shows:
+- Total items, loved, and disliked counts
+- Category breakdown
+- Source breakdown
+- Random sample of loved items per category
 
-Use the category filter (`-c`) when:
-- The user asks about a specific category (e.g., "analyze my game taste")
-- The full library is too large for efficient analysis
-- You want to focus recommendations on one area
+For detailed exploration, use the query command:
+
+```bash
+uv run discovery query --count                    # Total items
+uv run discovery query -c game --count            # Total games
+uv run discovery query -l --count                 # Total loved items
+uv run discovery query -c music -l --count        # Total loved music
+uv run discovery query -l -n 50                   # First 50 loved items
+uv run discovery query -l -n 50 --offset 50       # Next 50 loved items
+uv run discovery query -c game -l -n 100          # First 100 loved games
+uv run discovery query -a "FromSoftware"          # Items by creator
+uv run discovery query --min-rating 4             # Items rated 4+
+uv run discovery query -c movie -r -n 10          # 10 random movies
+uv run discovery query -s "dark souls" -f json    # Search as JSON
+```
+
+## Query Command Reference
+
+The `query` command provides flexible access to the library:
+
+**Filters:**
+- `-c, --category` - Filter by category (music, game, book, movie, tv, podcast, paper)
+- `-l, --loved` - Only loved items
+- `-d, --disliked` - Only disliked items
+- `-a, --creator` - Filter by creator (partial match)
+- `--min-rating` - Minimum rating (1-5)
+- `--max-rating` - Maximum rating (1-5)
+- `-s, --search` - Search title/creator
+
+**Pagination:**
+- `-n, --limit` - Max items to return (default: 20)
+- `--offset` - Skip first N items
+
+**Other:**
+- `-r, --random` - Random sample instead of sorted
+- `--count` - Show only count, not items
+- `-f, --format` - Output format (text or json)
+
+**Example workflow for large libraries:**
+
+1. Run `discovery status` for overview and sample loved items
+2. Check sizes: `discovery query -l --count`
+3. If > 200 loved items, paginate: `discovery query -l -n 100` then `--offset 100`
+4. Use category filters to focus: `discovery query -c game -l`
+5. Use random samples for variety: `discovery query -c music -l -r -n 20`
 
 ## Available Actions
 
@@ -115,25 +154,26 @@ Structure recommendations clearly:
 ## Example Interactions
 
 User: "Analyze my game taste"
-1. Run `uv run discovery export -c game` to get game library
-2. Read the output focusing on loved games
+1. Run `uv run discovery status` to get overview
+2. Run `uv run discovery query -c game -l -n 100` (paginate if needed)
 3. Identify patterns (genres, themes, mechanics, studios)
 4. Provide detailed taste profile
 
 User: "Find me new music"
-1. Run `uv run discovery export -c music` to get music library
-2. Identify loved music artists, genres, moods
+1. Run `uv run discovery query -c music -l -n 50` for loved music
+2. Identify artists, genres, moods
 3. Web search for similar artists and new releases
 4. Provide personalized recommendations with explanations
 
 User: "What books should I read based on the games I love?"
-1. Run `uv run discovery export -c game` for game context
+1. Run `uv run discovery query -c game -l -n 50` for game context
 2. Analyze game themes and narratives
 3. Web search for books with similar themes
 4. Recommend books that match game preferences
 
 User: "Any new releases I'd like?"
-1. Run `uv run discovery export` to get full library
-2. Identify preferred categories and genres
-3. Web search for recent releases matching taste
-4. Filter and present relevant new releases
+1. Run `uv run discovery status` to understand library
+2. Run `uv run discovery query -l -r -n 30` for random sample of loved items
+3. Identify preferred categories and genres
+4. Web search for recent releases matching taste
+5. Filter and present relevant new releases

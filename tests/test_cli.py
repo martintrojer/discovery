@@ -38,7 +38,7 @@ class TestStatusCommand:
 
         assert result.exit_code == 0
         assert "Discovery Library Status" in result.output
-        assert "No items yet" in result.output
+        assert "Total items: 0" in result.output
 
     def test_status_with_items(self, runner: CliRunner, cli_db: Database):
         # Add some items
@@ -52,6 +52,18 @@ class TestStatusCommand:
         assert "music" in result.output
         assert "2 items" in result.output
         assert "1 loved" in result.output
+
+    def test_status_json_format(self, runner: CliRunner, cli_db: Database):
+        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
+        cli_db.upsert_rating(Rating(item_id="1", loved=True))
+
+        result = runner.invoke(cli, ["status", "-f", "json"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "totals" in data
+        assert "categories" in data
+        assert "sources" in data
 
 
 class TestAddCommand:
@@ -313,34 +325,85 @@ class TestDislikedCommand:
         assert "Bad Show" in result.output
 
 
-class TestExportCommand:
-    def test_export_text(self, runner: CliRunner, cli_db: Database):
-        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song"))
+class TestQueryCommand:
+    def test_query_count(self, runner: CliRunner, cli_db: Database):
+        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
+        cli_db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song 2"))
 
-        result = runner.invoke(cli, ["export"])
+        result = runner.invoke(cli, ["query", "--count"])
 
         assert result.exit_code == 0
-        assert "# Discovery Library Export" in result.output
+        assert "Count: 2" in result.output
 
-    def test_export_json(self, runner: CliRunner, cli_db: Database):
+    def test_query_count_by_category(self, runner: CliRunner, cli_db: Database):
+        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song"))
+        cli_db.upsert_item(Item(id="2", category=Category.GAME, title="Game"))
+
+        result = runner.invoke(cli, ["query", "-c", "music", "--count"])
+
+        assert result.exit_code == 0
+        assert "Count (music): 1" in result.output
+
+    def test_query_loved(self, runner: CliRunner, cli_db: Database):
+        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Loved Song"))
+        cli_db.upsert_item(Item(id="2", category=Category.MUSIC, title="Other Song"))
+        cli_db.upsert_rating(Rating(item_id="1", loved=True))
+
+        result = runner.invoke(cli, ["query", "-l"])
+
+        assert result.exit_code == 0
+        assert "Loved Song" in result.output
+        assert "Other Song" not in result.output
+
+    def test_query_disliked(self, runner: CliRunner, cli_db: Database):
+        cli_db.upsert_item(Item(id="1", category=Category.MOVIE, title="Bad Movie"))
+        cli_db.upsert_rating(Rating(item_id="1", loved=False))
+
+        result = runner.invoke(cli, ["query", "-d"])
+
+        assert result.exit_code == 0
+        assert "Bad Movie" in result.output
+
+    def test_query_pagination(self, runner: CliRunner, cli_db: Database):
+        for i in range(30):
+            cli_db.upsert_item(Item(id=str(i), category=Category.MUSIC, title=f"Song {i:02d}"))
+
+        result = runner.invoke(cli, ["query", "-n", "10"])
+
+        assert result.exit_code == 0
+        assert "10 of 30" in result.output
+        assert "--offset 10" in result.output
+
+    def test_query_json_format(self, runner: CliRunner, cli_db: Database):
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song"))
 
-        result = runner.invoke(cli, ["export", "-f", "json"])
+        result = runner.invoke(cli, ["query", "-f", "json"])
 
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert "stats" in data
-        assert "loved" in data
-        assert "disliked" in data
+        assert "total" in data
+        assert "items" in data
+        assert len(data["items"]) == 1
 
-    def test_export_to_file(self, runner: CliRunner, cli_db: Database, tmp_path: Path):
-        output_file = tmp_path / "export.txt"
+    def test_query_search(self, runner: CliRunner, cli_db: Database):
+        cli_db.upsert_item(Item(id="1", category=Category.GAME, title="Dark Souls"))
+        cli_db.upsert_item(Item(id="2", category=Category.GAME, title="Elden Ring"))
 
-        result = runner.invoke(cli, ["export", "-o", str(output_file)])
+        result = runner.invoke(cli, ["query", "-s", "souls"])
 
         assert result.exit_code == 0
-        assert "Exported to" in result.output
-        assert output_file.exists()
+        assert "Dark Souls" in result.output
+        assert "Elden Ring" not in result.output
+
+    def test_query_by_creator(self, runner: CliRunner, cli_db: Database):
+        cli_db.upsert_item(Item(id="1", category=Category.GAME, title="Elden Ring", creator="FromSoftware"))
+        cli_db.upsert_item(Item(id="2", category=Category.GAME, title="Zelda", creator="Nintendo"))
+
+        result = runner.invoke(cli, ["query", "-a", "FromSoftware"])
+
+        assert result.exit_code == 0
+        assert "Elden Ring" in result.output
+        assert "Zelda" not in result.output
 
 
 class TestImportCommands:
