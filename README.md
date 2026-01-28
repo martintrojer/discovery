@@ -62,6 +62,13 @@ discovery import bbc-iplayer watching_history.csv
 discovery import apple-podcasts Podcasts.opml
 ```
 
+**Incremental Updates**: It's safe to import the same file multiple times. Discovery automatically:
+- Detects existing items by source ID and updates them
+- Links items across sources using fuzzy title/creator matching
+- Creates a backup before each import (restorable via `discovery backup restore`)
+
+This means you can re-export and re-import periodically to keep your library in sync.
+
 ### Add Items Manually
 
 Quick way to add individual items without a full import:
