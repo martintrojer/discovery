@@ -6,8 +6,19 @@ Discovery imports your library data from various sources, tracks what you love, 
 
 ## Installation
 
+### As a tool (recommended)
+
+```bash
+uv tool install .
+```
+
+This installs `discovery` globally, available from anywhere.
+
+### For development
+
 ```bash
 uv sync
+uv run discovery --help
 ```
 
 ## Quick Start
