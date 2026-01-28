@@ -146,7 +146,7 @@ discovery backup create      # Create a manual backup
 discovery backup restore 1   # Restore from backup #1
 ```
 
-Backups are stored in `~/.discovery/backups/` and the 10 most recent are kept.
+Backups are stored in `~/.local/state/discovery/backups/` and the 10 most recent are kept.
 
 ## Claude Code Integration
 
@@ -182,7 +182,7 @@ Just type `/discovery` in Claude Code, then ask things like:
 
 ## Data Storage
 
-Library data is stored in `~/.discovery/discovery.db` (DuckDB).
+Library data is stored in `~/.local/state/discovery/discovery.db` (DuckDB).
 
 ## Categories
 

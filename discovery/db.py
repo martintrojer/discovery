@@ -10,8 +10,8 @@ import duckdb
 
 from .models import Category, Item, ItemSource, Rating, Source, SyncState
 
-DEFAULT_DB_PATH = Path.home() / ".discovery" / "discovery.db"
-BACKUP_DIR = Path.home() / ".discovery" / "backups"
+DEFAULT_DB_PATH = Path.home() / ".local" / "state" / "discovery" / "discovery.db"
+BACKUP_DIR = Path.home() / ".local" / "state" / "discovery" / "backups"
 MAX_BACKUPS = 10  # Keep last 10 backups
 
 
