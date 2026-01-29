@@ -55,6 +55,12 @@ def import_cmd() -> None:
     pass
 
 
+@cli.group(name="scrape")
+def scrape_cmd() -> None:
+    """Scrape/convert data into Discovery import formats."""
+    pass
+
+
 # Import command configuration: name -> (module_name, class_name, docstring)
 _FILE_IMPORTERS = {
     "apple-music": ("apple_music", "AppleMusicImporter", "Import music from Apple Music/iTunes library XML."),
@@ -155,6 +161,40 @@ def _print_import_result(result) -> None:
         if len(result.errors) > 5:
             click.echo(f"    ... and {len(result.errors) - 5} more")
     click.echo()
+
+
+@scrape_cmd.command(name="netflix-html")
+@click.argument("html_path", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--output",
+    "-o",
+    "output_path",
+    type=click.Path(path_type=Path),
+    help="Output CSV path (default: same name with .csv)",
+)
+@click.option("--import", "do_import", is_flag=True, help="Import the generated CSV after scraping")
+@click.pass_context
+def scrape_netflix_html(
+    ctx: click.Context,
+    html_path: Path,
+    output_path: Path | None,
+    do_import: bool,
+) -> None:
+    """Convert a Netflix ratings HTML page to CSV."""
+    from .scrapers.netflix_html import convert_html_to_csv
+
+    out_path = output_path or html_path.with_suffix(".csv")
+    rows = convert_html_to_csv(html_path, out_path)
+    click.echo(f"Wrote {len(rows)} rows to {out_path}")
+
+    if do_import:
+        from .importers.netflix import NetflixImporter
+
+        db: Database = ctx.obj["db"]
+        _create_backup_before_import(db, "netflix")
+        importer = NetflixImporter(db)
+        result = importer.import_from_file(out_path)
+        _print_import_result(result)
 
 
 def _select_item(db: Database, query: str, max_results: int = 10) -> Item | None:

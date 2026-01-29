@@ -200,6 +200,50 @@ class TestNetflixImporter:
         assert "The Office (U.S.)" in titles
         assert "Some Movie" in titles
 
+    def test_import_ratings_csv(self, importer: NetflixImporter, tmp_import_dir: Path):
+        csv_content = """Title,Date,Rating
+"Some Movie","2024-01-01","thumbs up"
+"Another Movie","2024-01-02","two thumbs up"
+"Bad Movie","2024-01-03","thumbs down"
+"""
+        file_path = tmp_import_dir / "Ratings.csv"
+        file_path.write_text(csv_content)
+
+        result = importer.import_from_file(file_path)
+
+        assert result.items_added == 3
+        movie = importer.db.search_items("Some Movie", category=Category.MOVIE)[0]
+        rating = importer.db.get_rating(movie.id)
+        assert rating is not None
+        assert rating.rating == 4
+        assert rating.loved is True
+
+    def test_import_ratings_html(self, importer: NetflixImporter, tmp_import_dir: Path):
+        html_content = """
+<ul class="structural retable stdHeight">
+  <li class="retableRow">
+    <div class="col date nowrap">17/1/26</div>
+    <div class="col title"><a href="/title/81713296">The Holdovers</a></div>
+    <div class="col rating nowrap">
+      <div>
+        <button aria-label="Already rated: two thumbs up (click to remove rating)" data-rating="3"></button>
+      </div>
+    </div>
+  </li>
+</ul>
+"""
+        file_path = tmp_import_dir / "ratings.html"
+        file_path.write_text(html_content)
+
+        result = importer.import_from_file(file_path)
+
+        assert result.items_added == 1
+        movie = importer.db.search_items("The Holdovers", category=Category.MOVIE)[0]
+        rating = importer.db.get_rating(movie.id)
+        assert rating is not None
+        assert rating.rating == 5
+        assert rating.loved is True
+
 
 class TestGoodreadsImporter:
     @pytest.fixture

@@ -124,7 +124,7 @@ class Database:
         backup_dir.mkdir(parents=True, exist_ok=True)
 
         # Create backup filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         backup_name = f"discovery_{timestamp}_{reason}.db"
         backup_path = backup_dir / backup_name
 
@@ -140,7 +140,11 @@ class Database:
 
     def _cleanup_old_backups(self, backup_dir: Path) -> None:
         """Remove old backups, keeping only the most recent MAX_BACKUPS."""
-        backups = sorted(backup_dir.glob("discovery_*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
+        backups = sorted(
+            backup_dir.glob("discovery_*.db"),
+            key=lambda p: self._parse_backup_timestamp(p) or datetime.fromtimestamp(p.stat().st_mtime),
+            reverse=True,
+        )
 
         for old_backup in backups[MAX_BACKUPS:]:
             old_backup.unlink()
@@ -159,20 +163,13 @@ class Database:
             return []
 
         backups = []
-        for backup_file in sorted(backup_dir.glob("discovery_*.db"), key=lambda p: p.stat().st_mtime, reverse=True):
-            # Parse filename: discovery_YYYYMMDD_HHMMSS_reason.db
-            parts = backup_file.stem.split("_")
-            if len(parts) >= 4:
-                date_str = parts[1]
-                time_str = parts[2]
-                reason = "_".join(parts[3:])
-                try:
-                    timestamp = datetime.strptime(f"{date_str}_{time_str}", "%Y%m%d_%H%M%S")
-                except ValueError:
-                    timestamp = datetime.fromtimestamp(backup_file.stat().st_mtime)
-            else:
-                timestamp = datetime.fromtimestamp(backup_file.stat().st_mtime)
-                reason = "unknown"
+        for backup_file in sorted(
+            backup_dir.glob("discovery_*.db"),
+            key=lambda p: self._parse_backup_timestamp(p) or datetime.fromtimestamp(p.stat().st_mtime),
+            reverse=True,
+        ):
+            reason = self._parse_backup_reason(backup_file)
+            timestamp = self._parse_backup_timestamp(backup_file) or datetime.fromtimestamp(backup_file.stat().st_mtime)
 
             backups.append(
                 {
@@ -184,6 +181,35 @@ class Database:
             )
 
         return backups
+
+    def _parse_backup_timestamp(self, backup_file: Path) -> datetime | None:
+        """Parse timestamp from backup filename (supports legacy and microsecond formats)."""
+        parts = backup_file.stem.split("_")
+        if len(parts) < 4:
+            return None
+
+        date_str = parts[1]
+        time_str = parts[2]
+        if len(parts) >= 5 and parts[3].isdigit():
+            micros = parts[3]
+            fmt = "%Y%m%d_%H%M%S_%f"
+            ts = f"{date_str}_{time_str}_{micros}"
+        else:
+            fmt = "%Y%m%d_%H%M%S"
+            ts = f"{date_str}_{time_str}"
+
+        try:
+            return datetime.strptime(ts, fmt)
+        except ValueError:
+            return None
+
+    def _parse_backup_reason(self, backup_file: Path) -> str:
+        parts = backup_file.stem.split("_")
+        if len(parts) >= 5 and parts[3].isdigit():
+            return "_".join(parts[4:])
+        if len(parts) >= 4:
+            return "_".join(parts[3:])
+        return "unknown"
 
     def restore_backup(self, backup_path: Path) -> bool:
         """Restore database from a backup.
