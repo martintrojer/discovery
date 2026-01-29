@@ -134,6 +134,40 @@ class TestImportDeduplication:
 
         db.close()
 
+    def test_fuzzy_fallback_dedup_when_search_misses(self, tmp_path: Path):
+        """Fallback fuzzy scan should match when DB search returns no candidates."""
+        db_path = tmp_path / "test.db"
+        db = Database(db_path=db_path)
+
+        item = Item(
+            id="manual-2",
+            category=Category.MUSIC,
+            title="Star Wars Episode IV",
+            creator="John Williams",
+        )
+        db.upsert_item(item)
+        db.upsert_item_source(ItemSource(item_id="manual-2", source=Source.MANUAL, source_id="manual-2"))
+
+        importer = SpotifyImporter(db)
+        data = {"tracks": [{"artist": "John Williams", "album": "Themes", "track": "Star Wars: Episode IV"}]}
+        file_path = tmp_path / "library.json"
+        file_path.write_text(json.dumps(data))
+
+        result = importer.import_from_file(file_path)
+
+        assert result.items_added == 0
+        assert result.items_updated == 1
+
+        items = db.get_items_by_category(Category.MUSIC)
+        assert len(items) == 1
+
+        sources = db.get_item_sources("manual-2")
+        source_types = {s.source for s in sources}
+        assert Source.MANUAL in source_types
+        assert Source.SPOTIFY in source_types
+
+        db.close()
+
 
 class TestManualAddDeduplication:
     """Test that manual adds don't create duplicates."""
