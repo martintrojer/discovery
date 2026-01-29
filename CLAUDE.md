@@ -58,6 +58,7 @@ Tests use temporary DuckDB databases that are automatically cleaned up.
   - `importers/` - Data importers
     - `base.py` - BaseImporter class
     - `spotify.py`, `netflix.py`, `steam.py`, etc.
+  - `scrapers/` - HTML/format conversion helpers (e.g. Netflix ratings HTML -> CSV)
 - `tests/` - Test suite
   - `conftest.py` - Shared pytest fixtures
   - `test_models.py` - Unit tests for data models
@@ -80,3 +81,8 @@ Tests use temporary DuckDB databases that are automatically cleaned up.
 ### Claude Code Integration
 
 The `/discovery` skill uses `discovery status` and `discovery query` for AI-powered analysis. No external API keys needed.
+
+### Recent CLI Additions
+
+- `discovery scrape netflix-html ratings.html` converts Netflix ratings HTML to CSV (or `--import` to import directly).
+- `discovery import netflix ratings.html` also accepts HTML ratings pages in addition to CSV viewing history.

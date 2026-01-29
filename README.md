@@ -53,6 +53,7 @@ discovery import goodreads goodreads_library_export.csv
 
 # TV/Movies
 discovery import netflix ViewingActivity.csv
+discovery import netflix ratings.html
 discovery import amazon-prime ViewingHistory.csv
 discovery import disney-plus viewing-history.csv
 discovery import apple-tv viewing_activity.csv
@@ -68,6 +69,18 @@ discovery import apple-podcasts Podcasts.opml
 - Creates a backup before each import (restorable via `discovery backup restore`)
 
 This means you can re-export and re-import periodically to keep your library in sync.
+
+### Scrape / Convert Data
+
+Some sources are easier to import after converting or scraping:
+
+```bash
+# Convert Netflix ratings HTML into CSV
+discovery scrape netflix-html ratings.html -o ratings.csv
+
+# Convert and import in one step
+discovery scrape netflix-html ratings.html --import
+```
 
 ### Add Items Manually
 
@@ -196,12 +209,12 @@ Just type `/discovery` in Claude Code, then ask things like:
 | Games | Steam | API | Playtime > 10hrs |
 | Books | Goodreads | CSV export | Rating >= 4 stars |
 | Books | Kindle | Coming soon | Manual only |
-| TV/Movies | Netflix | CSV export | Manual only |
+| TV/Movies | Netflix | CSV/HTML export | Ratings/thumbs (HTML), viewing history is manual |
 | TV/Movies | Amazon Prime | CSV export | Manual only |
 | TV/Movies | Disney+ | CSV export | Manual only |
 | TV/Movies | Apple TV+ | CSV export | Manual only |
 | TV/Movies | BBC iPlayer | CSV export | Manual only |
-| Podcasts | Apple Podcasts | OPML export | Manual only |
+| Podcasts | Apple Podcasts | OPML/SQLite/JSON | Favorites if present, otherwise manual |
 
 ## Data Storage
 
