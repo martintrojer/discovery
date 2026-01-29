@@ -41,26 +41,6 @@ def query_items_with_filters(
     return items, total
 
 
-def count_items_with_filters(
-    db: Database,
-    category: Category | None,
-    loved_filter: bool | None,
-    creator: str | None,
-    min_rating: int | None,
-    max_rating: int | None,
-    search: str | None,
-) -> int:
-    """Count items matching filters."""
-    return db.count_items(
-        category=category,
-        loved=loved_filter,
-        creator=creator,
-        min_rating=min_rating,
-        max_rating=max_rating,
-        search=search,
-    )
-
-
 def build_filter_description(
     category: str | None,
     loved: bool,

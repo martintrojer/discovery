@@ -61,9 +61,10 @@ class TestStatusCommand:
 
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert "totals" in data
-        assert "categories" in data
-        assert "sources" in data
+        assert data["totals"]["items"] == 1
+        assert data["totals"]["loved"] == 1
+        assert data["categories"]["music"]["total"] == 1
+        assert data["categories"]["music"]["loved"] == 1
 
 
 class TestAddCommand:
@@ -115,6 +116,7 @@ class TestAddCommand:
         runner.invoke(cli, ["add", "Test", "-c", "movie"])
         result = runner.invoke(cli, ["add", "Test", "-c", "movie"])
 
+        assert result.exit_code == 0
         assert "already exists" in result.output
 
     def test_add_force_skips_duplicate_check(self, runner: CliRunner, cli_db: Database):
@@ -199,6 +201,7 @@ class TestUpdateCommand:
 
         result = runner.invoke(cli, ["update", "Test"])
 
+        assert result.exit_code == 0
         assert "No changes specified" in result.output
 
 
@@ -225,6 +228,7 @@ class TestLoveCommand:
     def test_love_not_found(self, runner: CliRunner, cli_db: Database):
         result = runner.invoke(cli, ["love", "Nonexistent"])
 
+        assert result.exit_code == 0
         assert "No items found" in result.output
 
 
@@ -425,3 +429,9 @@ class TestImportCommands:
 
         assert result.exit_code == 0
         assert "Added:" in result.output
+
+        # Verify the item was imported correctly
+        items = cli_db.get_items_by_category(Category.TV)
+        assert len(items) >= 1
+        titles = [item.title for item in items]
+        assert any("Breaking Bad" in title for title in titles)

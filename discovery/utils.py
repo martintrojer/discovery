@@ -4,6 +4,9 @@ import re
 
 from rapidfuzz import fuzz
 
+# Display limits
+DEFAULT_DISPLAY_LIMIT = 10
+
 
 def normalize_title(title: str, strip_editions: bool = True) -> str:
     """Normalize a title for comparison.

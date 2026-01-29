@@ -332,15 +332,29 @@ class Database:
 
         return [self._row_to_item(r) for r in results]
 
-    def get_all_loved_items(self) -> list[Item]:
-        """Get all items that are loved (either locally or in source)."""
-        results = self.conn.execute("""
+    def get_all_loved_items(self, category: Category | None = None) -> list[Item]:
+        """Get all items that are loved (either locally or in source).
+
+        Args:
+            category: Optional category to filter by
+
+        Returns:
+            List of loved items
+        """
+        sql = """
             SELECT DISTINCT i.id, i.category, i.title, i.creator, i.metadata, i.created_at, i.updated_at
             FROM items i
             LEFT JOIN ratings r ON i.id = r.item_id
             LEFT JOIN item_sources s ON i.id = s.item_id
-            WHERE r.loved = TRUE OR s.source_loved = TRUE
-        """).fetchall()
+            WHERE (r.loved = TRUE OR s.source_loved = TRUE)
+        """
+        params: list = []
+
+        if category:
+            sql += " AND i.category = ?"
+            params.append(category.value)
+
+        results = self.conn.execute(sql, params).fetchall()
 
         return [self._row_to_item(r) for r in results]
 

@@ -8,11 +8,11 @@ from pathlib import Path
 
 import click
 
-from .cli_items import create_item, find_similar_items, set_loved_status, update_item_fields, upsert_rating
+from .cli_items import create_item, find_similar_items, get_loved_status_from_flags, update_item_fields, upsert_rating
 from .cli_query import build_filter_description, format_items_as_json, query_items_with_filters
 from .db import Database
 from .models import Category, Item
-from .utils import format_rating, group_by_category
+from .utils import DEFAULT_DISPLAY_LIMIT, format_rating, group_by_category
 
 
 @click.group()
@@ -198,7 +198,7 @@ def scrape_netflix_html(
         _print_import_result(result)
 
 
-def _select_item(db: Database, query: str, max_results: int = 10) -> Item | None:
+def _select_item(db: Database, query: str, max_results: int = DEFAULT_DISPLAY_LIMIT) -> Item | None:
     """Search and interactively select an item."""
     items = db.search_items(query)
     if not items:
@@ -219,6 +219,25 @@ def _select_item(db: Database, query: str, max_results: int = 10) -> Item | None
         click.echo("Invalid choice")
         return None
     return items[choice - 1]
+
+
+def _display_items_by_category(items: list[Item], label: str) -> None:
+    """Display items grouped by category."""
+    if not items:
+        click.echo(f"No {label} items yet.")
+        return
+
+    click.echo(f"\n{len(items)} {label} items:\n")
+
+    by_category = group_by_category(items)
+    for cat, cat_items in sorted(by_category.items()):
+        click.echo(f"  {cat.upper()} ({len(cat_items)})")
+        for item in cat_items[:DEFAULT_DISPLAY_LIMIT]:
+            creator_str = f" - {item.creator}" if item.creator else ""
+            click.echo(f"    {item.title}{creator_str}")
+        if len(cat_items) > DEFAULT_DISPLAY_LIMIT:
+            click.echo(f"    ... and {len(cat_items) - DEFAULT_DISPLAY_LIMIT} more")
+        click.echo()
 
 
 @cli.command()
@@ -350,9 +369,7 @@ def update(
 
     # Update rating
     if loved or dislike or unlove or rating or notes:
-        loved_status = set_loved_status(db, item.id, loved, dislike, unlove)
-        # When unlove is set, we need to explicitly clear loved (not preserve existing)
-        preserve_loved = not unlove
+        loved_status, preserve_loved = get_loved_status_from_flags(loved, dislike, unlove)
         upsert_rating(db, item.id, loved=loved_status, rating=rating, notes=notes, preserve_loved=preserve_loved)
         updated = True
 
@@ -431,27 +448,9 @@ def dislike(
 def loved(ctx: click.Context, category: str | None) -> None:
     """List all loved items."""
     db: Database = ctx.obj["db"]
-
-    if category:
-        items = db.get_items_by_category(Category(category), loved_only=True)
-    else:
-        items = db.get_all_loved_items()
-
-    if not items:
-        click.echo("No loved items yet.")
-        return
-
-    click.echo(f"\n{len(items)} loved items:\n")
-
-    by_category = group_by_category(items)
-    for cat, cat_items in sorted(by_category.items()):
-        click.echo(f"  {cat.upper()} ({len(cat_items)})")
-        for item in cat_items[:10]:
-            creator_str = f" - {item.creator}" if item.creator else ""
-            click.echo(f"    {item.title}{creator_str}")
-        if len(cat_items) > 10:
-            click.echo(f"    ... and {len(cat_items) - 10} more")
-        click.echo()
+    cat_filter = Category(category) if category else None
+    items = db.get_all_loved_items(category=cat_filter)
+    _display_items_by_category(items, "loved")
 
 
 @cli.command()
@@ -460,25 +459,9 @@ def loved(ctx: click.Context, category: str | None) -> None:
 def disliked(ctx: click.Context, category: str | None) -> None:
     """List all disliked items."""
     db: Database = ctx.obj["db"]
-
     cat_filter = Category(category) if category else None
     items = db.get_all_disliked_items(category=cat_filter)
-
-    if not items:
-        click.echo("No disliked items yet.")
-        return
-
-    click.echo(f"\n{len(items)} disliked items:\n")
-
-    by_category = group_by_category(items)
-    for cat, cat_items in sorted(by_category.items()):
-        click.echo(f"  {cat.upper()} ({len(cat_items)})")
-        for item in cat_items[:10]:
-            creator_str = f" - {item.creator}" if item.creator else ""
-            click.echo(f"    {item.title}{creator_str}")
-        if len(cat_items) > 10:
-            click.echo(f"    ... and {len(cat_items) - 10} more")
-        click.echo()
+    _display_items_by_category(items, "disliked")
 
 
 @cli.command()

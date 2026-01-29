@@ -61,7 +61,6 @@ def format_status_text(db: Database) -> str:
         Formatted text summary
     """
     data = get_library_status(db)
-    cat_stats = db.get_category_stats()
     lines = []
 
     lines.append("# Discovery Library Status\n")
@@ -101,7 +100,7 @@ def format_status_text(db: Database) -> str:
             creator_str = f" - {item['creator']}" if item.get("creator") else ""
             lines.append(f"- {item['title']}{creator_str}")
 
-        total_loved_cat = cat_stats.get(cat.value, {}).get("loved", 0)
+        total_loved_cat = data["categories"].get(cat.value, {}).get("loved", 0)
         if total_loved_cat > 5:
             lines.append(f"- ... and {total_loved_cat - 5} more (use 'discovery query -c {cat.value} -l' to see all)")
         lines.append("")

@@ -155,20 +155,22 @@ def upsert_rating(
     )
 
 
-def set_loved_status(
-    db: Database,
-    item_id: str,
+def get_loved_status_from_flags(
     loved: bool,
     dislike: bool,
     unlove: bool = False,
-) -> bool | None:
-    """Determine loved status from flags. Returns the status to set."""
+) -> tuple[bool | None, bool]:
+    """Determine loved status from flags.
+
+    Returns:
+        Tuple of (loved_status, should_preserve_existing).
+        If should_preserve_existing is True, caller should use existing value.
+    """
     if loved:
-        return True
+        return True, False
     elif dislike:
-        return False
+        return False, False
     elif unlove:
-        return None
+        return None, False
     else:
-        existing = db.get_rating(item_id)
-        return existing.loved if existing else None
+        return None, True  # Preserve existing
