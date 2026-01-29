@@ -1,15 +1,18 @@
 """CLI for Discovery."""
 
 import importlib
+import json as json_module
 import sys
-from datetime import datetime
+import uuid
 from pathlib import Path
 
 import click
 
+from .cli_items import create_item, find_similar_items, set_loved_status, update_item_fields, upsert_rating
+from .cli_query import build_filter_description, format_items_as_json, query_items_with_filters
 from .db import Database
-from .models import Category, Item, Rating
-from .utils import format_rating, group_by_category, normalize_title
+from .models import Category, Item
+from .utils import format_rating, group_by_category
 
 
 @click.group()
@@ -35,13 +38,11 @@ def status(ctx: click.Context, format: str) -> None:
     - Source breakdown
     - Sample loved items per category
     """
-    from .status import format_status_text, get_library_status
+    from .cli_status import format_status_text, get_library_status
 
     db: Database = ctx.obj["db"]
 
     if format == "json":
-        import json as json_module
-
         data = get_library_status(db)
         click.echo(json_module.dumps(data, indent=2, default=str))
     else:
@@ -198,16 +199,7 @@ def scrape_netflix_html(
 
 
 def _select_item(db: Database, query: str, max_results: int = 10) -> Item | None:
-    """Search and interactively select an item.
-
-    Args:
-        db: Database instance
-        query: Search query
-        max_results: Maximum items to show for selection
-
-    Returns:
-        Selected Item or None if no selection made
-    """
+    """Search and interactively select an item."""
     items = db.search_items(query)
     if not items:
         click.echo(f"No items found matching '{query}'")
@@ -257,11 +249,6 @@ def add(
     force: bool,
 ) -> None:
     """Add an item manually (watched, read, played, etc.)."""
-    import uuid
-
-    from .models import Item, ItemSource, Source
-    from .models import Rating as RatingModel
-
     db: Database = ctx.obj["db"]
     cat = Category(category)
 
@@ -278,7 +265,7 @@ def add(
                     return
 
         # Check for fuzzy matches
-        similar = _find_similar_items(db, title, cat, creator)
+        similar = find_similar_items(db, title, cat, creator)
         if similar:
             click.echo("\nDid you mean one of these existing items?\n")
             for i, item in enumerate(similar[:5], 1):
@@ -297,21 +284,9 @@ def add(
             if 1 <= choice <= len(similar[:5]):
                 # User selected existing item - update it instead
                 selected = similar[choice - 1]
-                loved_status = True if loved else (False if dislike else None)
-
                 if loved or dislike or rating or notes:
-                    existing_rating = db.get_rating(selected.id)
-                    db.upsert_rating(
-                        RatingModel(
-                            item_id=selected.id,
-                            loved=loved_status
-                            if loved_status is not None
-                            else (existing_rating.loved if existing_rating else None),
-                            rating=rating or (existing_rating.rating if existing_rating else None),
-                            notes=notes or (existing_rating.notes if existing_rating else None),
-                            rated_at=datetime.now(),
-                        )
-                    )
+                    loved_status = True if loved else (False if dislike else None)
+                    upsert_rating(db, selected.id, loved=loved_status, rating=rating, notes=notes)
                     click.echo(f"Updated: {selected.title}")
                     if loved:
                         click.echo("  Loved: yes")
@@ -321,41 +296,13 @@ def add(
                     click.echo(f"Selected existing item: {selected.title}")
                 return
 
-            # User chose to add as new
-
     # Create new item
     item_id = str(uuid.uuid4())
-    item = Item(
-        id=item_id,
-        category=cat,
-        title=title,
-        creator=creator,
-        metadata={},
-    )
-    db.upsert_item(item)
+    create_item(db, item_id, cat, title, creator)
 
-    # Add source as manual
-    loved_status = True if loved else (False if dislike else None)
-    item_source = ItemSource(
-        item_id=item_id,
-        source=Source.MANUAL,
-        source_id=item_id,
-        source_loved=loved_status,
-        source_data={},
-    )
-    db.upsert_item_source(item_source)
-
-    # Add rating if loved, disliked, or rated
     if loved or dislike or rating or notes:
-        db.upsert_rating(
-            RatingModel(
-                item_id=item_id,
-                loved=loved_status,
-                rating=rating,
-                notes=notes,
-                rated_at=datetime.now(),
-            )
-        )
+        loved_status = True if loved else (False if dislike else None)
+        upsert_rating(db, item_id, loved=loved_status, rating=rating, notes=notes)
 
     creator_str = f" by {creator}" if creator else ""
     click.echo(f"Added: [{category}] {title}{creator_str}")
@@ -365,67 +312,6 @@ def add(
         click.echo("  Disliked: yes")
     if rating:
         click.echo(f"  Rating: {format_rating(rating)}")
-
-
-def _find_similar_items(db: Database, title: str, category: Category, creator: str | None) -> list:
-    """Find items similar to the given title using fuzzy matching."""
-    normalized_input = normalize_title(title)
-    if len(normalized_input) < 3:
-        return []
-
-    # Search with first part of title
-    search_term = title.split()[0] if " " in title else title[:5]
-    candidates = db.search_items(search_term, category=category)
-
-    # Also search all items in category if title is short
-    if len(candidates) < 10:
-        all_in_category = db.get_items_by_category(category)
-        seen_ids = {c.id for c in candidates}
-        for item in all_in_category:
-            if item.id not in seen_ids:
-                candidates.append(item)
-
-    similar = []
-    for item in candidates:
-        normalized_item = normalize_title(item.title)
-
-        # Check various similarity conditions
-        is_similar = False
-
-        # Exact normalized match
-        if normalized_input == normalized_item:
-            is_similar = True
-
-        # One contains the other (for subtitles, editions, etc.)
-        elif len(normalized_input) >= 5 and len(normalized_item) >= 5:
-            if normalized_input in normalized_item or normalized_item in normalized_input:
-                is_similar = True
-
-        # Common prefix (at least 60% of shorter string)
-        elif len(normalized_input) >= 5 and len(normalized_item) >= 5:
-            min_len = min(len(normalized_input), len(normalized_item))
-            prefix_len = 0
-            for a, b in zip(normalized_input, normalized_item, strict=False):
-                if a == b:
-                    prefix_len += 1
-                else:
-                    break
-            if prefix_len >= min_len * 0.6:
-                is_similar = True
-
-        # Creator match helps with similarity
-        if creator and item.creator:
-            creator_norm = creator.lower()
-            item_creator_norm = item.creator.lower()
-            if creator_norm in item_creator_norm or item_creator_norm in creator_norm:
-                # If creators match, be more lenient with title matching
-                if normalized_input[:4] == normalized_item[:4]:
-                    is_similar = True
-
-        if is_similar:
-            similar.append(item)
-
-    return similar
 
 
 @cli.command()
@@ -460,40 +346,17 @@ def update(
 
     # Update item fields
     if title or creator is not None:
-        if title:
-            item.title = title
-        if creator is not None:
-            item.creator = creator if creator else None
-        item.updated_at = datetime.now()
-        db.upsert_item(item)
-        updated = True
+        updated = update_item_fields(db, item, title=title, creator=creator)
 
     # Update rating
     if loved or dislike or unlove or rating or notes:
-        existing = db.get_rating(item.id)
-        loved_status = None
-        if loved:
-            loved_status = True
-        elif dislike:
-            loved_status = False
-        elif unlove:
-            loved_status = None
-        elif existing:
-            loved_status = existing.loved
-
-        db.upsert_rating(
-            Rating(
-                item_id=item.id,
-                loved=loved_status,
-                rating=rating or (existing.rating if existing else None),
-                notes=notes if notes is not None else (existing.notes if existing else None),
-                rated_at=datetime.now(),
-            )
-        )
+        loved_status = set_loved_status(db, item.id, loved, dislike, unlove)
+        # When unlove is set, we need to explicitly clear loved (not preserve existing)
+        preserve_loved = not unlove
+        upsert_rating(db, item.id, loved=loved_status, rating=rating, notes=notes, preserve_loved=preserve_loved)
         updated = True
 
     if updated:
-        # Show updated item
         updated_item = db.get_item(item.id)
         creator_str = f" by {updated_item.creator}" if updated_item.creator else ""
         click.echo(f"Updated: {updated_item.title}{creator_str}")
@@ -530,16 +393,7 @@ def love(
     if not item:
         return
 
-    # Update rating
-    existing = db.get_rating(item.id)
-    new_rating = Rating(
-        item_id=item.id,
-        loved=True,
-        rating=rating or (existing.rating if existing else None),
-        notes=notes or (existing.notes if existing else None),
-        rated_at=datetime.now(),
-    )
-    db.upsert_rating(new_rating)
+    upsert_rating(db, item.id, loved=True, rating=rating, notes=notes)
 
     click.echo(f"Loved: {item.title}")
     if rating:
@@ -564,16 +418,7 @@ def dislike(
     if not item:
         return
 
-    # Update rating with loved=False (disliked)
-    existing = db.get_rating(item.id)
-    new_rating = Rating(
-        item_id=item.id,
-        loved=False,
-        rating=existing.rating if existing else None,
-        notes=notes or (existing.notes if existing else None),
-        rated_at=datetime.now(),
-    )
-    db.upsert_rating(new_rating)
+    upsert_rating(db, item.id, loved=False, notes=notes)
 
     click.echo(f"Disliked: {item.title}")
     if notes:
@@ -598,9 +443,7 @@ def loved(ctx: click.Context, category: str | None) -> None:
 
     click.echo(f"\n{len(items)} loved items:\n")
 
-    # Group by category
     by_category = group_by_category(items)
-
     for cat, cat_items in sorted(by_category.items()):
         click.echo(f"  {cat.upper()} ({len(cat_items)})")
         for item in cat_items[:10]:
@@ -627,9 +470,7 @@ def disliked(ctx: click.Context, category: str | None) -> None:
 
     click.echo(f"\n{len(items)} disliked items:\n")
 
-    # Group by category
     by_category = group_by_category(items)
-
     for cat, cat_items in sorted(by_category.items()):
         click.echo(f"  {cat.upper()} ({len(cat_items)})")
         for item in cat_items[:10]:
@@ -683,8 +524,6 @@ def query(
       discovery query -c movie -r -n 10          # 10 random movies
       discovery query -s "souls" -f json         # Search as JSON
     """
-    import json as json_module
-
     db: Database = ctx.obj["db"]
     cat = Category(category) if category else None
     loved_filter = True if loved else (False if disliked else None)
@@ -701,66 +540,16 @@ def query(
         if format == "json":
             click.echo(json_module.dumps({"count": total}))
         else:
-            # Build filter description
-            filters = []
-            if category:
-                filters.append(category)
-            if loved:
-                filters.append("loved")
-            if disliked:
-                filters.append("disliked")
-            if creator:
-                filters.append(f"creator: {creator}")
-            if min_rating:
-                filters.append(f"rating >= {min_rating}")
-            if max_rating:
-                filters.append(f"rating <= {max_rating}")
-            if search:
-                filters.append(f"search: {search}")
-
-            filter_str = f" ({', '.join(filters)})" if filters else ""
+            filter_str = build_filter_description(category, loved, disliked, creator, min_rating, max_rating, search)
             click.echo(f"Count{filter_str}: {total}")
         return
 
-    items = db.query_items(
-        category=cat,
-        loved=loved_filter,
-        creator=creator,
-        min_rating=min_rating,
-        max_rating=max_rating,
-        search=search,
-        limit=limit,
-        offset=offset,
-        random=random,
-    )
-
-    # Get total for pagination info
-    total = db.count_items(
-        category=cat,
-        loved=loved_filter,
-        creator=creator,
-        min_rating=min_rating,
-        max_rating=max_rating,
-        search=search,
+    items, total = query_items_with_filters(
+        db, cat, loved_filter, creator, min_rating, max_rating, search, limit, offset, random
     )
 
     if format == "json":
-        data = {
-            "total": total,
-            "offset": offset,
-            "limit": limit,
-            "items": [
-                {
-                    "id": item.id,
-                    "category": item.category.value,
-                    "title": item.title,
-                    "creator": item.creator,
-                    "sources": [s.source.value for s in db.get_item_sources(item.id)],
-                    "metadata": item.metadata,
-                }
-                for item in items
-            ],
-        }
+        data = format_items_as_json(db, items, total, offset, limit)
         click.echo(json_module.dumps(data, indent=2, default=str))
     else:
         if not items:
