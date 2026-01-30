@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from discovery.models import Category, Item, ItemSource, Rating, Source, SyncState
+from discovery.models import Category, Item, ItemSource, Rating, Source, SyncState, WishlistItem
 
 
 class TestCategory:
@@ -106,3 +106,20 @@ class TestSyncState:
         assert state.source == Source.STEAM
         assert state.last_sync == now
         assert state.cursor == "page_2"
+
+
+class TestWishlistItem:
+    def test_create_wishlist_item(self):
+        item = WishlistItem(
+            id="wish-1",
+            category=Category.BOOK,
+            title="Test Book",
+            creator="Test Author",
+            notes="Read this soon",
+        )
+        assert item.id == "wish-1"
+        assert item.category == Category.BOOK
+        assert item.title == "Test Book"
+        assert item.creator == "Test Author"
+        assert item.notes == "Read this soon"
+        assert isinstance(item.created_at, datetime)

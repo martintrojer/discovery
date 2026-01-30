@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from discovery.db import Database
-from discovery.models import Category, Item, ItemSource, Rating, Source, SyncState
+from discovery.models import Category, Item, ItemSource, Rating, Source, SyncState, WishlistItem
 
 
 class TestDatabaseInit:
@@ -251,6 +251,57 @@ class TestSyncStateOperations:
     def test_get_nonexistent_sync_state(self, db: Database):
         result = db.get_sync_state(Source.STEAM)
         assert result is None
+
+
+class TestWishlistOperations:
+    def test_add_and_get_wishlist_item(self, db: Database):
+        wishlist_item = WishlistItem(
+            id="wish-1",
+            category=Category.MOVIE,
+            title="Inception",
+            creator="Christopher Nolan",
+            notes="Rewatch in IMAX",
+        )
+        db.add_wishlist_item(wishlist_item)
+
+        retrieved = db.get_wishlist_item("wish-1")
+        assert retrieved is not None
+        assert retrieved.title == "Inception"
+        assert retrieved.creator == "Christopher Nolan"
+        assert retrieved.notes == "Rewatch in IMAX"
+
+    def test_get_wishlist_items_by_category(self, db: Database):
+        db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="Album A"))
+        db.add_wishlist_item(WishlistItem(id="2", category=Category.BOOK, title="Book B"))
+        db.add_wishlist_item(WishlistItem(id="3", category=Category.MUSIC, title="Album C"))
+
+        music_items = db.get_wishlist_items(category=Category.MUSIC)
+        assert len(music_items) == 2
+        titles = {item.title for item in music_items}
+        assert "Album A" in titles
+        assert "Album C" in titles
+
+    def test_search_wishlist_items(self, db: Database):
+        db.add_wishlist_item(WishlistItem(id="1", category=Category.TV, title="The Wire", creator="David Simon"))
+        db.add_wishlist_item(WishlistItem(id="2", category=Category.TV, title="The Bear", creator="Christopher Storer"))
+
+        results = db.search_wishlist_items("wire")
+        assert len(results) == 1
+        assert results[0].title == "The Wire"
+
+        creator_results = db.search_wishlist_items("storer")
+        assert len(creator_results) == 1
+        assert creator_results[0].title == "The Bear"
+
+    def test_remove_wishlist_item(self, db: Database):
+        db.add_wishlist_item(WishlistItem(id="1", category=Category.GAME, title="Hades II"))
+
+        removed = db.remove_wishlist_item("1")
+        assert removed is True
+        assert db.get_wishlist_item("1") is None
+
+        removed_again = db.remove_wishlist_item("1")
+        assert removed_again is False
 
 
 class TestAnalyticsQueries:

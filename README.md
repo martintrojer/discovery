@@ -2,7 +2,7 @@
 
 Discover new things you might love across music, games, books, movies, TV, podcasts, and academic papers.
 
-Discovery imports your library data from various sources, tracks what you love, and uses Claude Code's `/discovery` skill for AI-powered taste analysis and recommendations.
+Discovery imports your library data from various sources, tracks what you love, maintains per-category wishlists, and uses Claude Code's `/discovery` skill for AI-powered taste analysis and recommendations.
 
 ## Installation
 
@@ -34,6 +34,7 @@ uv run discovery --help
 ```bash
 discovery status
 ```
+Status output includes wishlist totals, per-category wishlist counts, and sample wishlist items.
 
 ### Import Data
 
@@ -106,6 +107,7 @@ discovery add "Hardcore History" -c podcast -a "Dan Carlin"
 Options: `-c` category (required), `-a` creator, `-l` loved, `-d` dislike, `-r` rating (1-5), `-n` notes, `-f` force (skip duplicate check)
 
 When adding items, Discovery uses fuzzy matching to detect potential duplicates. If a similar item exists, you'll be prompted to select the existing item or add as new.
+If the new item matches an existing wishlist entry, it is automatically pruned from the wishlist.
 
 ### Track Favorites
 
@@ -116,6 +118,20 @@ discovery love "Dark Souls III"
 discovery love "The Name of the Wind" --rating 5 --notes "Best fantasy series"
 discovery dislike "Bad Movie" --notes "Terrible ending"
 ```
+
+### Wishlist
+
+Wishlist items are for things you want to watch/read/play/listen to later.
+
+```bash
+discovery wishlist view                 # Show all wishlist items
+discovery wishlist view -c game         # Filter by category
+discovery wishlist add "Hades II" -c game -a "Supergiant Games"
+discovery wishlist remove "Hades II"
+discovery wishlist prune                # Remove wishlist items already in your library
+```
+
+Discovery automatically prunes wishlist items after imports and manual adds when it finds a fuzzy match.
 
 ### Update Items
 
@@ -190,6 +206,7 @@ The `/discovery` skill provides AI-powered features:
 
 - **Taste Analysis**: Identify patterns in your preferences
 - **Recommendations**: Find new items matching your taste via web search
+- **Wishlist-aware**: Avoid recommending items already on your wishlist and suggest adding standout picks
 - **New Releases**: Discover upcoming releases you'd enjoy
 - **Cross-Category**: Find books based on games you love, etc.
 

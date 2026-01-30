@@ -52,7 +52,7 @@ Tests use temporary DuckDB databases that are automatically cleaned up.
 - `discovery/` - Main package
   - `cli.py` - CLI commands (uses factory pattern for import commands)
   - `db.py` - DuckDB storage layer (supports context manager, advanced query methods)
-  - `models.py` - Data models (Category, Source, Item, Rating, etc.)
+  - `models.py` - Data models (Category, Source, Item, Rating, WishlistItem, etc.)
   - `utils.py` - Shared utilities (normalize_title, format_rating, fuzzy matching)
   - `status.py` - Status and summary functions for library overview
   - `importers/` - Data importers
@@ -80,9 +80,10 @@ Tests use temporary DuckDB databases that are automatically cleaned up.
 
 ### Claude Code Integration
 
-The `/discovery` skill uses `discovery status` and `discovery query` for AI-powered analysis. No external API keys needed.
+The `/discovery` skill uses `discovery status`, `discovery query`, and `discovery wishlist view` for AI-powered analysis. No external API keys needed.
 
 ### Recent CLI Additions
 
 - `discovery scrape netflix-html ratings.html` converts Netflix ratings HTML to CSV (or `--import` to import directly).
 - `discovery import netflix ratings.html` also accepts HTML ratings pages in addition to CSV viewing history.
+- `discovery wishlist add/view/remove/prune` manages wishlist items (auto-pruned after imports and manual adds).

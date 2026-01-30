@@ -8,7 +8,7 @@ from typing import Any
 
 import duckdb
 
-from .models import Category, Item, ItemSource, Rating, Source, SyncState
+from .models import Category, Item, ItemSource, Rating, Source, SyncState, WishlistItem
 
 DEFAULT_DB_PATH = Path.home() / ".local" / "state" / "discovery" / "discovery.db"
 BACKUP_DIR = Path.home() / ".local" / "state" / "discovery" / "backups"
@@ -72,6 +72,17 @@ class Database:
         """)
 
         self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS wishlist_items (
+                id TEXT PRIMARY KEY,
+                category TEXT NOT NULL,
+                title TEXT NOT NULL,
+                creator TEXT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        self.conn.execute("""
             CREATE TABLE IF NOT EXISTS sync_state (
                 source TEXT PRIMARY KEY,
                 last_sync TIMESTAMP NOT NULL,
@@ -100,6 +111,24 @@ class Database:
             metadata=json.loads(row[4]) if row[4] else {},
             created_at=row[5],
             updated_at=row[6],
+        )
+
+    def _row_to_wishlist_item(self, row: tuple) -> WishlistItem:
+        """Convert a database row to a WishlistItem.
+
+        Args:
+            row: Tuple of (id, category, title, creator, notes, created_at)
+
+        Returns:
+            WishlistItem instance
+        """
+        return WishlistItem(
+            id=row[0],
+            category=Category(row[1]),
+            title=row[2],
+            creator=row[3],
+            notes=row[4],
+            created_at=row[5],
         )
 
     # Backup operations
@@ -465,6 +494,78 @@ class Database:
             notes=result[3],
             rated_at=result[4],
         )
+
+    # Wishlist operations
+
+    def add_wishlist_item(self, item: WishlistItem) -> None:
+        """Add an item to the wishlist."""
+        self.conn.execute(
+            """
+            INSERT INTO wishlist_items (id, category, title, creator, notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                item.id,
+                item.category.value,
+                item.title,
+                item.creator,
+                item.notes,
+                item.created_at,
+            ],
+        )
+
+    def get_wishlist_item(self, item_id: str) -> WishlistItem | None:
+        """Get a wishlist item by ID."""
+        result = self.conn.execute(
+            "SELECT id, category, title, creator, notes, created_at FROM wishlist_items WHERE id = ?",
+            [item_id],
+        ).fetchone()
+
+        if not result:
+            return None
+
+        return self._row_to_wishlist_item(result)
+
+    def get_wishlist_items(self, category: Category | None = None) -> list[WishlistItem]:
+        """Get all wishlist items, optionally filtered by category."""
+        sql = "SELECT id, category, title, creator, notes, created_at FROM wishlist_items"
+        params: list[Any] = []
+
+        if category:
+            sql += " WHERE category = ?"
+            params.append(category.value)
+
+        sql += " ORDER BY title"
+        results = self.conn.execute(sql, params).fetchall()
+        return [self._row_to_wishlist_item(r) for r in results]
+
+    def search_wishlist_items(self, query: str, category: Category | None = None) -> list[WishlistItem]:
+        """Search wishlist items by title/creator."""
+        sql = """
+            SELECT id, category, title, creator, notes, created_at
+            FROM wishlist_items
+            WHERE (title ILIKE ? OR creator ILIKE ?)
+        """
+        params: list[Any] = [f"%{query}%", f"%{query}%"]
+
+        if category:
+            sql += " AND category = ?"
+            params.append(category.value)
+
+        sql += " ORDER BY title"
+        results = self.conn.execute(sql, params).fetchall()
+        return [self._row_to_wishlist_item(r) for r in results]
+
+    def remove_wishlist_item(self, item_id: str) -> bool:
+        """Remove a wishlist item by ID. Returns True if removed."""
+        result = self.conn.execute(
+            "SELECT COUNT(*) FROM wishlist_items WHERE id = ?",
+            [item_id],
+        ).fetchone()
+        if not result or result[0] == 0:
+            return False
+        self.conn.execute("DELETE FROM wishlist_items WHERE id = ?", [item_id])
+        return True
 
     # Sync state operations
 

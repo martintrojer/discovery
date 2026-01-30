@@ -1,0 +1,10 @@
+web_search = "live"
+
+[[approval_rules]]
+type = "prefix"
+pattern = ["uv", "run", "discovery"]
+decision = "allow"
+
+[sandbox_workspace_write]
+writable_roots = ["~/.cache/uv", "~/.local/state/discovery"]
+network_access = true

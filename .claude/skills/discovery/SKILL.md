@@ -22,6 +22,8 @@ The status command shows:
 - Category breakdown
 - Source breakdown
 - Random sample of loved items per category
+- Wishlist totals and per-category wishlist counts
+- Sample wishlist items per category
 
 For detailed exploration, use the query command:
 
@@ -37,6 +39,23 @@ uv run discovery query -a "FromSoftware"          # Items by creator
 uv run discovery query --min-rating 4             # Items rated 4+
 uv run discovery query -c movie -r -n 10          # 10 random movies
 uv run discovery query -s "dark souls" -f json    # Search as JSON
+```
+
+## Wishlist
+
+Wishlist items are future-intent entries (things the user wants to watch/read/play/listen to). They are **per category** and should be treated as **unconsumed**. Use them to:
+- Avoid recommending items already on the wishlist
+- Prefer recommending adjacent or complementary items
+- Suggest adding a recommendation to the wishlist when it’s a strong match
+
+Commands:
+
+```bash
+uv run discovery wishlist view                 # Show all wishlist items
+uv run discovery wishlist view -c game         # Show wishlist items for a category
+uv run discovery wishlist add "Title" -c book  # Add to wishlist
+uv run discovery wishlist remove "Title"       # Remove from wishlist
+uv run discovery wishlist prune                # Remove wishlist items already in library
 ```
 
 ## Query Command Reference
@@ -100,6 +119,7 @@ For each recommendation provide:
 - Title and creator
 - Why it matches their taste (reference specific items they love)
 - Where to find/consume it
+- **Wishlist prompt** if it’s a very strong fit (ask if they want it added)
 
 ### 3. New Releases
 
@@ -150,6 +170,7 @@ Structure recommendations clearly:
 - *Why you'll love it*: [Connection to their taste]
 - *Similar to*: [Items from their library]
 - *Where to find*: [Platform/availability]
+- *Wishlist?*: “Want me to add this to your wishlist?” (only for standout matches)
 
 ## Example Interactions
 
@@ -162,8 +183,10 @@ User: "Analyze my game taste"
 User: "Find me new music"
 1. Run `uv run discovery query -c music -l -n 50` for loved music
 2. Identify artists, genres, moods
+3. Run `uv run discovery wishlist view -c music` to avoid duplicates and refine taste
 3. Web search for similar artists and new releases
 4. Provide personalized recommendations with explanations
+5. If a rec is a standout match, ask if the user wants it added to the wishlist
 
 User: "What books should I read based on the games I love?"
 1. Run `uv run discovery query -c game -l -n 50` for game context
@@ -175,5 +198,7 @@ User: "Any new releases I'd like?"
 1. Run `uv run discovery status` to understand library
 2. Run `uv run discovery query -l -r -n 30` for random sample of loved items
 3. Identify preferred categories and genres
+4. Run `uv run discovery wishlist view` to avoid recommending items already on the wishlist
 4. Web search for recent releases matching taste
 5. Filter and present relevant new releases
+6. Ask to add standout picks to the wishlist

@@ -8,7 +8,7 @@ from click.testing import CliRunner
 
 from discovery.cli import cli
 from discovery.db import Database
-from discovery.models import Category, Item, Rating
+from discovery.models import Category, Item, Rating, WishlistItem
 
 
 @pytest.fixture
@@ -39,6 +39,7 @@ class TestStatusCommand:
         assert result.exit_code == 0
         assert "Discovery Library Status" in result.output
         assert "Total items: 0" in result.output
+        assert "Wishlist: 0" in result.output
 
     def test_status_with_items(self, runner: CliRunner, cli_db: Database):
         # Add some items
@@ -56,6 +57,7 @@ class TestStatusCommand:
     def test_status_json_format(self, runner: CliRunner, cli_db: Database):
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         cli_db.upsert_rating(Rating(item_id="1", loved=True))
+        cli_db.add_wishlist_item(WishlistItem(id="w1", category=Category.MUSIC, title="Wish 1"))
 
         result = runner.invoke(cli, ["status", "-f", "json"])
 
@@ -63,8 +65,10 @@ class TestStatusCommand:
         data = json.loads(result.output)
         assert data["totals"]["items"] == 1
         assert data["totals"]["loved"] == 1
+        assert data["totals"]["wishlist"] == 1
         assert data["categories"]["music"]["total"] == 1
         assert data["categories"]["music"]["loved"] == 1
+        assert data["categories"]["music"]["wishlist"] == 1
 
 
 class TestAddCommand:
@@ -298,6 +302,120 @@ class TestDislikedCommand:
         assert result.exit_code == 0
         assert "1 disliked items" in result.output
         assert "Bad Show" in result.output
+
+
+class TestWishlistCommands:
+    def test_wishlist_add(self, runner: CliRunner, cli_db: Database):
+        result = runner.invoke(cli, ["wishlist", "add", "Dune", "-c", "book", "-a", "Frank Herbert"])
+
+        assert result.exit_code == 0
+        assert "Wishlist added" in result.output
+
+        items = cli_db.get_wishlist_items(category=Category.BOOK)
+        assert len(items) == 1
+        assert items[0].title == "Dune"
+
+    def test_wishlist_add_duplicate(self, runner: CliRunner, cli_db: Database):
+        cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.BOOK, title="Dune", creator="Frank Herbert"))
+
+        result = runner.invoke(cli, ["wishlist", "add", "Dune", "-c", "book", "-a", "Frank Herbert"])
+
+        assert result.exit_code == 0
+        assert "Wishlist item already exists" in result.output
+
+        items = cli_db.get_wishlist_items(category=Category.BOOK)
+        assert len(items) == 1
+
+    def test_wishlist_add_duplicate_without_creator(self, runner: CliRunner, cli_db: Database):
+        cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.BOOK, title="Dune"))
+
+        result = runner.invoke(cli, ["wishlist", "add", "Dune", "-c", "book"])
+
+        assert result.exit_code == 0
+        assert "Wishlist item already exists" in result.output
+
+        items = cli_db.get_wishlist_items(category=Category.BOOK)
+        assert len(items) == 1
+
+    def test_wishlist_view(self, runner: CliRunner, cli_db: Database):
+        from discovery.models import WishlistItem
+
+        cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="Album A"))
+        cli_db.add_wishlist_item(WishlistItem(id="2", category=Category.GAME, title="Game B"))
+
+        result = runner.invoke(cli, ["wishlist", "view"])
+
+        assert result.exit_code == 0
+        assert "wishlist items" in result.output
+        assert "Album A" in result.output
+        assert "Game B" in result.output
+
+    def test_wishlist_view_search_category(self, runner: CliRunner, cli_db: Database):
+        cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="Album A", creator="Artist A"))
+        cli_db.add_wishlist_item(WishlistItem(id="2", category=Category.GAME, title="Game B", creator="Studio B"))
+
+        result = runner.invoke(cli, ["wishlist", "view", "-c", "music", "-s", "Artist"])
+
+        assert result.exit_code == 0
+        assert "Album A" in result.output
+        assert "Game B" not in result.output
+
+    def test_wishlist_remove(self, runner: CliRunner, cli_db: Database):
+        from discovery.models import WishlistItem
+
+        cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MOVIE, title="Blade Runner"))
+
+        result = runner.invoke(cli, ["wishlist", "remove", "Blade Runner"])
+
+        assert result.exit_code == 0
+        assert "Wishlist removed" in result.output
+        assert cli_db.get_wishlist_item("1") is None
+
+    def test_wishlist_prune(self, runner: CliRunner, cli_db: Database):
+        from discovery.models import WishlistItem
+
+        cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="The Wall"))
+        cli_db.upsert_item(Item(id="a", category=Category.MUSIC, title="The Wall", creator="Pink Floyd"))
+
+        result = runner.invoke(cli, ["wishlist", "prune", "-c", "music"])
+
+        assert result.exit_code == 0
+        assert "Pruned 1 wishlist item" in result.output
+        assert cli_db.get_wishlist_item("1") is None
+
+    def test_wishlist_prune_creator_mismatch(self, runner: CliRunner, cli_db: Database):
+        cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="Halo", creator="Radiohead"))
+        cli_db.upsert_item(Item(id="a", category=Category.MUSIC, title="Halo", creator="Dostoevsky"))
+
+        result = runner.invoke(cli, ["wishlist", "prune", "-c", "music"])
+
+        assert result.exit_code == 0
+        assert "No wishlist items to prune" in result.output
+        assert cli_db.get_wishlist_item("1") is not None
+
+    def test_auto_prune_on_add(self, runner: CliRunner, cli_db: Database):
+        from discovery.models import WishlistItem
+
+        cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.BOOK, title="Dune"))
+
+        result = runner.invoke(cli, ["add", "Dune", "-c", "book"])
+
+        assert result.exit_code == 0
+        assert "Pruned 1 wishlist item" in result.output
+        assert cli_db.get_wishlist_item("1") is None
+
+    def test_auto_prune_on_import(self, runner: CliRunner, cli_db: Database, tmp_path: Path):
+        cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="Song A", creator="Artist"))
+
+        data = {"tracks": [{"artist": "Artist", "album": "Album", "track": "Song A"}]}
+        file_path = tmp_path / "library.json"
+        file_path.write_text(json.dumps(data))
+
+        result = runner.invoke(cli, ["import", "spotify", str(file_path)])
+
+        assert result.exit_code == 0
+        assert "Pruned 1 wishlist item" in result.output
+        assert cli_db.get_wishlist_item("1") is None
 
 
 class TestQueryCommand:

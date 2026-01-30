@@ -11,8 +11,8 @@ import click
 from .cli_items import create_item, find_similar_items, get_loved_status_from_flags, update_item_fields, upsert_rating
 from .cli_query import build_filter_description, format_items_as_json, query_items_with_filters
 from .db import Database
-from .models import Category, Item
-from .utils import DEFAULT_DISPLAY_LIMIT, format_rating, group_by_category
+from .models import Category, Item, WishlistItem
+from .utils import DEFAULT_DISPLAY_LIMIT, creators_match, format_rating, group_by_category, titles_match
 
 
 @click.group()
@@ -102,6 +102,7 @@ def _create_file_import_command(name: str, module_name: str, class_name: str, do
         _create_backup_before_import(db, module_name)
         result = importer.import_from_file(file_path)
         _print_import_result(result)
+        _prune_wishlist_and_report(db, importer.category, f"import {name}")
 
     import_source.__doc__ = docstring
     return import_source
@@ -147,6 +148,7 @@ def import_steam(
         result = importer.import_from_api()
 
     _print_import_result(result)
+    _prune_wishlist_and_report(db, importer.category, "import steam")
 
 
 def _print_import_result(result) -> None:
@@ -196,6 +198,7 @@ def scrape_netflix_html(
         importer = NetflixImporter(db)
         result = importer.import_from_file(out_path)
         _print_import_result(result)
+        _prune_wishlist_and_report(db, importer.category, "import netflix")
 
 
 def _select_item(db: Database, query: str, max_results: int = DEFAULT_DISPLAY_LIMIT) -> Item | None:
@@ -238,6 +241,87 @@ def _display_items_by_category(items: list[Item], label: str) -> None:
         if len(cat_items) > DEFAULT_DISPLAY_LIMIT:
             click.echo(f"    ... and {len(cat_items) - DEFAULT_DISPLAY_LIMIT} more")
         click.echo()
+
+
+def _select_wishlist_item(db: Database, query: str, category: Category | None) -> WishlistItem | None:
+    """Search and interactively select a wishlist item."""
+    items = db.search_wishlist_items(query, category=category)
+    if not items:
+        click.echo(f"No wishlist items found matching '{query}'")
+        return None
+
+    if len(items) == 1:
+        return items[0]
+
+    click.echo(f"Multiple wishlist items match '{query}':")
+    display_items = items[:DEFAULT_DISPLAY_LIMIT]
+    for i, item in enumerate(display_items, 1):
+        creator_str = f" - {item.creator}" if item.creator else ""
+        click.echo(f"  {i}. [{item.category.value}] {item.title}{creator_str}")
+
+    choice = click.prompt("Select item number", type=int, default=1)
+    if not 1 <= choice <= len(display_items):
+        click.echo("Invalid choice")
+        return None
+    return items[choice - 1]
+
+
+def _display_wishlist_by_category(items: list[WishlistItem]) -> None:
+    """Display wishlist items grouped by category."""
+    if not items:
+        click.echo("No wishlist items yet.")
+        return
+
+    click.echo(f"\n{len(items)} wishlist items:\n")
+
+    by_category = group_by_category(items)
+    for cat, cat_items in sorted(by_category.items()):
+        click.echo(f"  {cat.upper()} ({len(cat_items)})")
+        for item in cat_items[:DEFAULT_DISPLAY_LIMIT]:
+            creator_str = f" - {item.creator}" if item.creator else ""
+            notes_str = f" ({item.notes})" if item.notes else ""
+            click.echo(f"    {item.title}{creator_str}{notes_str}")
+        if len(cat_items) > DEFAULT_DISPLAY_LIMIT:
+            click.echo(f"    ... and {len(cat_items) - DEFAULT_DISPLAY_LIMIT} more")
+        click.echo()
+
+
+def _find_wishlist_matches(db: Database, wishlist_item: WishlistItem) -> Item | None:
+    """Find a matching library item for a wishlist entry."""
+    candidates = db.search_items(wishlist_item.title, category=wishlist_item.category)
+    for candidate in candidates:
+        if titles_match(candidate.title, wishlist_item.title) and creators_match(
+            candidate.creator, wishlist_item.creator
+        ):
+            return candidate
+    return None
+
+
+def _prune_wishlist(db: Database, category: Category | None) -> list[WishlistItem]:
+    """Remove wishlist items that match existing library items."""
+    wishlist_items = db.get_wishlist_items(category=category)
+    removed: list[WishlistItem] = []
+
+    for wishlist_item in wishlist_items:
+        match = _find_wishlist_matches(db, wishlist_item)
+        if match and db.remove_wishlist_item(wishlist_item.id):
+            removed.append(wishlist_item)
+
+    return removed
+
+
+def _prune_wishlist_and_report(db: Database, category: Category, context: str) -> None:
+    """Prune wishlist and report if anything was removed."""
+    removed = _prune_wishlist(db, category)
+    if not removed:
+        return
+
+    click.echo(f"\nPruned {len(removed)} wishlist item(s) after {context}:")
+    for item in removed[:DEFAULT_DISPLAY_LIMIT]:
+        creator_str = f" - {item.creator}" if item.creator else ""
+        click.echo(f"  {item.title}{creator_str}")
+    if len(removed) > DEFAULT_DISPLAY_LIMIT:
+        click.echo(f"  ... and {len(removed) - DEFAULT_DISPLAY_LIMIT} more")
 
 
 @cli.command()
@@ -331,6 +415,8 @@ def add(
         click.echo("  Disliked: yes")
     if rating:
         click.echo(f"  Rating: {format_rating(rating)}")
+
+    _prune_wishlist_and_report(db, cat, "add")
 
 
 @cli.command()
@@ -462,6 +548,115 @@ def disliked(ctx: click.Context, category: str | None) -> None:
     cat_filter = Category(category) if category else None
     items = db.get_all_disliked_items(category=cat_filter)
     _display_items_by_category(items, "disliked")
+
+
+@cli.group()
+def wishlist() -> None:
+    """Manage wishlist items."""
+    pass
+
+
+@wishlist.command(name="add")
+@click.argument("title")
+@click.option(
+    "--category",
+    "-c",
+    type=click.Choice([c.value for c in Category]),
+    required=True,
+    help="Category (music, game, book, movie, tv, podcast, paper)",
+)
+@click.option("--creator", "-a", help="Creator (artist, author, developer, director)")
+@click.option("--notes", "-n", help="Notes")
+@click.pass_context
+def wishlist_add(
+    ctx: click.Context,
+    title: str,
+    category: str,
+    creator: str | None,
+    notes: str | None,
+) -> None:
+    """Add an item to a wishlist."""
+    db: Database = ctx.obj["db"]
+    cat = Category(category)
+
+    existing = db.search_wishlist_items(title, category=cat)
+    for item in existing:
+        if item.title.lower() == title.lower():
+            if creator and item.creator and item.creator.lower() == creator.lower():
+                click.echo(f"Wishlist item already exists: {item.title}")
+                return
+            if not creator:
+                click.echo(f"Wishlist item already exists: {item.title}")
+                return
+
+    wishlist_item = WishlistItem(
+        id=str(uuid.uuid4()),
+        category=cat,
+        title=title,
+        creator=creator,
+        notes=notes,
+    )
+    db.add_wishlist_item(wishlist_item)
+
+    creator_str = f" by {creator}" if creator else ""
+    click.echo(f"Wishlist added: [{category}] {title}{creator_str}")
+    if notes:
+        click.echo(f"  Notes: {notes}")
+
+
+@wishlist.command(name="view")
+@click.option("--category", "-c", type=click.Choice([c.value for c in Category]), help="Filter by category")
+@click.option("--search", "-s", help="Search title/creator")
+@click.pass_context
+def wishlist_view(ctx: click.Context, category: str | None, search: str | None) -> None:
+    """View wishlist items."""
+    db: Database = ctx.obj["db"]
+    cat_filter = Category(category) if category else None
+
+    if search:
+        items = db.search_wishlist_items(search, category=cat_filter)
+    else:
+        items = db.get_wishlist_items(category=cat_filter)
+
+    _display_wishlist_by_category(items)
+
+
+@wishlist.command(name="remove")
+@click.argument("query")
+@click.option("--category", "-c", type=click.Choice([c.value for c in Category]), help="Filter by category")
+@click.pass_context
+def wishlist_remove(ctx: click.Context, query: str, category: str | None) -> None:
+    """Remove an item from a wishlist."""
+    db: Database = ctx.obj["db"]
+    cat_filter = Category(category) if category else None
+
+    item = _select_wishlist_item(db, query, cat_filter)
+    if not item:
+        return
+
+    if db.remove_wishlist_item(item.id):
+        click.echo(f"Wishlist removed: {item.title}")
+    else:
+        click.echo("Wishlist item not found.")
+
+
+@wishlist.command(name="prune")
+@click.option("--category", "-c", type=click.Choice([c.value for c in Category]), help="Filter by category")
+@click.pass_context
+def wishlist_prune(ctx: click.Context, category: str | None) -> None:
+    """Remove wishlist items already in your library."""
+    db: Database = ctx.obj["db"]
+    cat_filter = Category(category) if category else None
+
+    removed = _prune_wishlist(db, cat_filter)
+    if not removed:
+        click.echo("No wishlist items to prune.")
+        return
+
+    click.echo(f"Pruned {len(removed)} wishlist item(s):")
+    for item in removed:
+        creator_str = f" - {item.creator}" if item.creator else ""
+        click.echo(f"  [{item.category.value}] {item.title}{creator_str}")
 
 
 @cli.command()

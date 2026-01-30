@@ -77,6 +77,18 @@ class Rating:
 
 
 @dataclass
+class WishlistItem:
+    """An item on a wishlist (per category)."""
+
+    id: str
+    category: Category
+    title: str
+    creator: str | None = None
+    notes: str | None = None
+    created_at: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
 class SyncState:
     """Tracks sync progress for a source."""
 
