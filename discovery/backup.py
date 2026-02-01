@@ -6,8 +6,9 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+from .config import MAX_BACKUPS
+
 DEFAULT_BACKUP_DIR = Path.home() / ".local" / "state" / "discovery" / "backups"
-MAX_BACKUPS = 10  # Keep last 10 backups
 
 
 class BackupManager:

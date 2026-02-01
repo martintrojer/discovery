@@ -8,9 +8,6 @@ from rapidfuzz import fuzz
 from .models import Category
 from .patterns import DIGIT_SUFFIX_RE, EDITION_PATTERNS, ROMAN_NUMERAL_SUFFIX_RE
 
-# Display limits
-DEFAULT_DISPLAY_LIMIT = 10
-
 
 def normalize_title(title: str, strip_editions: bool = True) -> str:
     """Normalize a title for comparison.

@@ -5,9 +5,10 @@ from typing import TypeVar
 
 import click
 
+from ..config import DEFAULT_DISPLAY_LIMIT
 from ..db import Database
 from ..models import Category, Item, WishlistItem
-from ..utils import DEFAULT_DISPLAY_LIMIT, group_by_category
+from ..utils import group_by_category
 
 T = TypeVar("T")
 

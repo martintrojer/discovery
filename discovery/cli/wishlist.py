@@ -4,9 +4,10 @@ import uuid
 
 import click
 
+from ..config import DEFAULT_DISPLAY_LIMIT
 from ..db import Database
 from ..models import Category, Item, WishlistItem
-from ..utils import DEFAULT_DISPLAY_LIMIT, creators_match, creators_match_exact, titles_match
+from ..utils import creators_match, creators_match_exact, titles_match
 from .core import cli
 from .display_helpers import display_wishlist_by_category, select_wishlist_item
 
