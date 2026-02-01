@@ -330,6 +330,13 @@ class TestAdvancedQueries:
         items = db.query_items(limit=0)
         assert items == []
 
+    def test_loved_count_distinct_per_item(self, db: Database) -> None:
+        db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song A"))
+        db.upsert_item_source(ItemSource(item_id="1", source=Source.SPOTIFY, source_id="sp:1", source_loved=True))
+        db.upsert_item_source(ItemSource(item_id="1", source=Source.APPLE_MUSIC, source_id="am:1", source_loved=True))
+
+        assert db.count_items(loved=True) == 1
+
     def test_get_source_stats(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song 2"))

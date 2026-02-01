@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from discovery.models import Category
-from discovery.utils import detect_video_category, parse_date, strip_sequel_numbers, titles_match_strict
+from discovery.utils import detect_video_category, parse_date, strip_sequel_numbers, titles_match, titles_match_strict
 
 
 class TestDetectVideoCategory:
@@ -25,8 +25,8 @@ class TestParseDate:
         parsed = parse_date("2024-01-02")
         assert parsed == datetime(2024, 1, 2)
 
-        parsed = parse_date("01/02/24")
-        assert parsed == datetime(2024, 2, 1)
+        parsed = parse_date("13/02/24")
+        assert parsed == datetime(2024, 2, 13)
 
     def test_returns_none_for_invalid(self) -> None:
         assert parse_date("not a date") is None
@@ -49,3 +49,5 @@ class TestTitlesMatchStrict:
 
     def test_strict_reject(self) -> None:
         assert titles_match_strict("Dark Souls", "Light Hearts") is False
+        assert titles_match("The Witcher", "The Witchar") is True
+        assert titles_match_strict("The Witcher", "The Witchar") is False
