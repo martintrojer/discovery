@@ -5,8 +5,9 @@ from __future__ import annotations
 import csv
 import html as html_lib
 import re
-from datetime import datetime
 from pathlib import Path
+
+from ..utils import parse_date
 
 _ROW_RE = re.compile(r'<li class="retableRow">(.*?)</li>', re.S)
 _DATE_RE = re.compile(r'<div class="col date nowrap">(.*?)</div>')
@@ -37,7 +38,8 @@ def parse_netflix_ratings_html(html_text: str) -> list[dict[str, str]]:
         if rated_m:
             rating_label = html_lib.unescape(rated_m.group(1).strip())
 
-        date_iso = _normalize_date(raw_date)
+        parsed_date = parse_date(raw_date)
+        date_iso = parsed_date.date().isoformat() if parsed_date else raw_date
 
         rows.append(
             {
@@ -64,28 +66,3 @@ def convert_html_to_csv(input_path: Path, output_path: Path) -> list[dict[str, s
     rows = parse_netflix_ratings_html(html_text)
     write_netflix_ratings_csv(rows, output_path)
     return rows
-
-
-def _normalize_date(raw: str) -> str:
-    if not raw:
-        return ""
-    raw_str = raw.strip()
-    if not raw_str:
-        return ""
-
-    formats = [
-        "%d/%m/%y",
-        "%m/%d/%y",
-        "%Y-%m-%d",
-        "%d/%m/%Y",
-        "%m/%d/%Y",
-        "%Y-%m-%d %H:%M:%S",
-    ]
-    for fmt in formats:
-        try:
-            dt = datetime.strptime(raw_str, fmt)
-            return dt.date().isoformat()
-        except ValueError:
-            continue
-
-    return raw_str

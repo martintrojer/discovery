@@ -1,6 +1,7 @@
 """Shared utilities for Discovery."""
 
 import re
+from datetime import datetime
 
 from rapidfuzz import fuzz
 
@@ -204,6 +205,32 @@ def group_by_category(items: list) -> dict[str, list]:
     for item in items:
         by_category[item.category.value].append(item)
     return dict(by_category)
+
+
+def parse_date(raw: str | None) -> datetime | None:
+    """Parse common date formats into a datetime."""
+    if not raw:
+        return None
+    raw_str = str(raw).strip()
+    if not raw_str:
+        return None
+
+    formats = [
+        "%d/%m/%y",
+        "%m/%d/%y",
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+        "%m/%d/%Y",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(raw_str, fmt)
+        except ValueError:
+            continue
+
+    return None
 
 
 def detect_video_category(title: str, content_type: str | None = None) -> Category:

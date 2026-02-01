@@ -7,7 +7,7 @@ from pathlib import Path
 from ..db import Database
 from ..models import Category, Item, ItemSource, Rating, Source
 from ..scrapers.netflix_html import parse_netflix_ratings_html
-from ..utils import detect_video_category
+from ..utils import detect_video_category, parse_date
 from .base import BaseImporter
 
 
@@ -229,30 +229,6 @@ Alternative - Ratings export:
             return None
         return rating >= 4
 
-    def _parse_datetime(self, raw: str | None) -> datetime | None:
-        if not raw:
-            return None
-        raw_str = str(raw).strip()
-        if not raw_str:
-            return None
-
-        formats = [
-            "%Y-%m-%d",
-            "%Y-%m-%d %H:%M:%S",
-            "%Y-%m-%d %H:%M",
-            "%m/%d/%y",
-            "%d/%m/%y",
-            "%m/%d/%Y",
-            "%d/%m/%Y",
-        ]
-        for fmt in formats:
-            try:
-                dt = datetime.strptime(raw_str, fmt)
-                return dt
-            except ValueError:
-                continue
-        return None
-
     def _upsert_rating(self, item_source: ItemSource) -> None:
         rating = item_source.source_data.get("source_rating")
         if rating is None:
@@ -261,7 +237,7 @@ Alternative - Ratings export:
             return
 
         rated_at_raw = item_source.source_data.get("rated_at")
-        rated_at = self._parse_datetime(rated_at_raw) or datetime.now()
+        rated_at = parse_date(rated_at_raw) or datetime.now()
 
         self.db.upsert_rating(
             Rating(
