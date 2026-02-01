@@ -6,7 +6,7 @@ import click
 
 from ..db import Database
 from ..models import Category, Item, WishlistItem
-from ..utils import DEFAULT_DISPLAY_LIMIT, creators_match, titles_match
+from ..utils import DEFAULT_DISPLAY_LIMIT, creators_match, creators_match_exact, titles_match
 from .core import cli
 from .display_helpers import display_wishlist_by_category, select_wishlist_item
 
@@ -81,7 +81,7 @@ def wishlist_add(
     existing = db.search_wishlist_items(title, category=cat)
     for item in existing:
         if item.title.lower() == title.lower():
-            if creator and item.creator and item.creator.lower() == creator.lower():
+            if creator and creators_match_exact(creator, item.creator):
                 click.echo(f"Wishlist item already exists: {item.title}")
                 return
             if not creator:

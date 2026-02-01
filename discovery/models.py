@@ -25,7 +25,6 @@ class Source(str, Enum):
     STEAM = "steam"
     # Books
     GOODREADS = "goodreads"
-    KINDLE = "kindle"
     # Video
     NETFLIX = "netflix"
     APPLE_TV = "apple_tv"
@@ -35,7 +34,6 @@ class Source(str, Enum):
     # Podcasts
     APPLE_PODCASTS = "apple_podcasts"
     # Academic
-    ARXIV = "arxiv"
     # Other
     MANUAL = "manual"
 

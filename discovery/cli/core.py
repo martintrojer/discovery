@@ -12,7 +12,7 @@ import click
 from ..db import Database
 from ..importers.base import ImportResult
 from ..models import Category
-from ..utils import format_rating
+from ..utils import creators_match_exact, format_rating
 from .display_helpers import display_items_by_category, select_item
 from .items_helpers import (
     create_item,
@@ -256,10 +256,10 @@ def add(
         existing = db.search_items(title, category=cat)
         for item in existing:
             if item.title.lower() == title.lower():
-                if creator and item.creator and item.creator.lower() == creator.lower():
+                if creator and creators_match_exact(creator, item.creator):
                     click.echo(f"Item already exists: {item.title}")
                     return
-                elif not creator:
+                if not creator:
                     click.echo(f"Item already exists: {item.title}")
                     return
 

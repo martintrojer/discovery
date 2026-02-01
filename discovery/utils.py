@@ -178,6 +178,13 @@ def creators_match(creator1: str | None, creator2: str | None, threshold: int = 
     return False
 
 
+def creators_match_exact(creator1: str | None, creator2: str | None) -> bool:
+    """Check if two creators match exactly, case-insensitively."""
+    if not creator1 or not creator2:
+        return False
+    return creator1.strip().lower() == creator2.strip().lower()
+
+
 def format_rating(rating: int) -> str:
     """Format a 1-5 rating as stars.
 
