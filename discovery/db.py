@@ -753,10 +753,12 @@ class Database:
         else:
             sql += " ORDER BY i.title"
 
-        if limit:
-            sql += f" LIMIT {limit}"
+        if limit is not None:
+            sql += " LIMIT ?"
+            params.append(limit)
         if offset:
-            sql += f" OFFSET {offset}"
+            sql += " OFFSET ?"
+            params.append(offset)
 
         results = self.conn.execute(sql, params).fetchall()
         return [self._row_to_item(r) for r in results]
