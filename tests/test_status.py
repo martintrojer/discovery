@@ -1,6 +1,6 @@
 """Unit tests for status module."""
 
-from discovery.cli.status import format_status_text, get_library_status
+from discovery.cli.status_helpers import format_status_text, get_library_status
 from discovery.db import Database
 from discovery.models import Category, Item, ItemSource, Rating, Source, WishlistItem
 

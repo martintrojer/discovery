@@ -8,7 +8,7 @@ from ..db import Database
 from ..models import Category, Item, WishlistItem
 from ..utils import DEFAULT_DISPLAY_LIMIT, creators_match, titles_match
 from .core import cli
-from .display import display_wishlist_by_category, select_wishlist_item
+from .display_helpers import display_wishlist_by_category, select_wishlist_item
 
 
 @cli.group()
