@@ -67,6 +67,14 @@ class BaseImporter(ABC):
         """Parse an export file and return items with their source info."""
         pass
 
+    def post_import_item(self, item: Item, item_source: ItemSource) -> None:
+        """Hook for post-processing each imported item."""
+        return None
+
+    def post_import(self, result: ImportResult) -> None:
+        """Hook for post-processing after import."""
+        return None
+
     def import_from_file(self, file_path: Path) -> ImportResult:
         """Import items from an export file."""
         items_added = 0
@@ -113,15 +121,20 @@ class BaseImporter(ABC):
                         self.db.upsert_item_source(item_source)
                         items_added += 1
 
+                self.post_import_item(item, item_source)
             except Exception as e:
                 errors.append(f"Failed to import '{item.title}': {e}")
 
-        return ImportResult(
+        result = ImportResult(
             source=self.source,
             items_added=items_added,
             items_updated=items_updated,
             errors=errors,
         )
+
+        self.post_import(result)
+
+        return result
 
     def _find_duplicate(self, item: Item) -> Item | None:
         """Try to find an existing item that matches (for deduplication).

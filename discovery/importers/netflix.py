@@ -130,67 +130,8 @@ Alternative - Ratings export:
             return False
         return '<li class="retableRow">' in head
 
-    def import_from_file(self, file_path: Path):
-        """Import items and ratings from a Netflix CSV export."""
-        items_added = 0
-        items_updated = 0
-        errors: list[str] = []
-
-        try:
-            parsed = self.parse_file(file_path)
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except Exception as e:
-            return self._import_error(str(e))
-
-        for item, item_source in parsed:
-            try:
-                existing = self.db.find_item_by_source(self.source, item_source.source_id)
-
-                if existing:
-                    item.id = existing.id
-                    item.created_at = existing.created_at
-                    item_source.item_id = existing.id
-                    self.db.upsert_item(item)
-                    self.db.upsert_item_source(item_source)
-                    items_updated += 1
-                else:
-                    dedup_item = self._find_duplicate(item)
-                    if dedup_item:
-                        item_source.item_id = dedup_item.id
-                        self.db.upsert_item_source(item_source)
-                        items_updated += 1
-                    else:
-                        self.db.upsert_item(item)
-                        item_source.item_id = item.id
-                        self.db.upsert_item_source(item_source)
-                        items_added += 1
-
-                self._upsert_rating(item_source)
-            except Exception as e:
-                errors.append(f"Failed to import '{item.title}': {e}")
-
-        return self._import_result(items_added, items_updated, errors)
-
-    def _import_error(self, message: str):
-        from .base import ImportResult
-
-        return ImportResult(
-            source=self.source,
-            items_added=0,
-            items_updated=0,
-            errors=[f"Failed to parse file: {message}"],
-        )
-
-    def _import_result(self, items_added: int, items_updated: int, errors: list[str]):
-        from .base import ImportResult
-
-        return ImportResult(
-            source=self.source,
-            items_added=items_added,
-            items_updated=items_updated,
-            errors=errors,
-        )
+    def post_import_item(self, item: Item, item_source: ItemSource) -> None:
+        self._upsert_rating(item_source)
 
     def _parse_rating(self, raw: str | None) -> int | None:
         if not raw:
