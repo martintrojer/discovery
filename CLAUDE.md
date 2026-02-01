@@ -17,7 +17,7 @@ Always run:
 ```bash
 uv run ruff format discovery/ tests/
 uv run ruff check discovery/ tests/
-uv run ty check discovery/
+uv run ty check discovery/ tests/
 uv run pytest tests/
 ```
 
@@ -50,24 +50,29 @@ Tests use temporary DuckDB databases that are automatically cleaned up.
 ### Project Structure
 
 - `discovery/` - Main package
-  - `cli.py` - CLI commands (uses factory pattern for import commands)
+  - `cli/` - CLI commands and helpers
+    - `core.py` - Root CLI group and core commands
+    - `backups.py`, `query.py`, `wishlist.py` - CLI subcommands
+    - `display_helpers.py`, `items_helpers.py`, `query_helpers.py`, `status_helpers.py` - CLI helpers
   - `db.py` - DuckDB storage layer (supports context manager, advanced query methods)
+  - `backup.py` - Backup manager
+  - `config.py` - Shared configuration constants
   - `models.py` - Data models (Category, Source, Item, Rating, WishlistItem, etc.)
+  - `patterns.py` - Shared regex patterns
   - `utils.py` - Shared utilities (normalize_title, format_rating, fuzzy matching)
-  - `status.py` - Status and summary functions for library overview
   - `importers/` - Data importers
     - `base.py` - BaseImporter class
     - `spotify.py`, `netflix.py`, `steam.py`, etc.
   - `scrapers/` - HTML/format conversion helpers (e.g. Netflix ratings HTML -> CSV)
 - `tests/` - Test suite
   - `conftest.py` - Shared pytest fixtures
-  - `test_models.py` - Unit tests for data models
   - `test_db.py` - Unit tests for database layer
   - `test_status.py` - Unit tests for status functions
   - `test_importers.py` - Unit tests for importers and utilities
   - `test_cli.py` - Integration tests for CLI
   - `test_deduplication.py` - Tests for deduplication logic
   - `test_backup.py` - Tests for backup functionality
+  - `test_utils.py`, `test_wishlist.py`, `test_display_helpers.py` - Utility/helper tests
 - `.claude/skills/discovery/SKILL.md` - Claude Code skill for AI analysis
 
 ### Adding New Importers
@@ -75,7 +80,7 @@ Tests use temporary DuckDB databases that are automatically cleaned up.
 1. Create `discovery/importers/your_source.py`
 2. Extend `BaseImporter` from `discovery/importers/base.py`
 3. Implement `get_manual_steps()` and `parse_file()`
-4. Add CLI command in `discovery/cli.py`
+4. Add CLI command in `discovery/cli/core.py`
 5. Add tests in `tests/test_importers.py`
 
 ### Claude Code Integration
