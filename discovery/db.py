@@ -1,27 +1,30 @@
 """DuckDB storage layer for Discovery."""
 
 import json
-import shutil
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import duckdb
 
+from .backup import DEFAULT_BACKUP_DIR, BackupManager
 from .models import Category, Item, ItemSource, Rating, Source, WishlistItem
 
 DEFAULT_DB_PATH = Path.home() / ".local" / "state" / "discovery" / "discovery.db"
-BACKUP_DIR = Path.home() / ".local" / "state" / "discovery" / "backups"
-MAX_BACKUPS = 10  # Keep last 10 backups
+BACKUP_DIR = DEFAULT_BACKUP_DIR
 
 
 class Database:
     """DuckDB-backed storage for discovery data."""
 
-    def __init__(self, db_path: Path | None = None):
+    def __init__(self, db_path: Path | None = None, backup_manager: BackupManager | None = None):
         self.db_path = db_path or DEFAULT_DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = duckdb.connect(str(self.db_path))
+        self.backups = backup_manager or BackupManager(
+            self.db_path,
+            default_db_path=DEFAULT_DB_PATH,
+            default_backup_dir=BACKUP_DIR,
+        )
         self._init_schema()
 
     def __enter__(self):
@@ -123,8 +126,6 @@ class Database:
             created_at=row[5],
         )
 
-    # Backup operations
-
     def create_backup(self, reason: str = "manual") -> Path | None:
         """Create a backup of the database.
 
@@ -137,38 +138,11 @@ class Database:
         if not self.db_path.exists():
             return None
 
-        backup_dir = BACKUP_DIR
-        if self.db_path != DEFAULT_DB_PATH:
-            # For test databases, use a local backup dir
-            backup_dir = self.db_path.parent / "backups"
-
-        backup_dir.mkdir(parents=True, exist_ok=True)
-
-        # Create backup filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        backup_name = f"discovery_{timestamp}_{reason}.db"
-        backup_path = backup_dir / backup_name
-
         # Close connection, copy file, reopen
         self.conn.close()
-        shutil.copy2(self.db_path, backup_path)
+        backup_path = self.backups.create_backup_file(reason)
         self.conn = duckdb.connect(str(self.db_path))
-
-        # Cleanup old backups
-        self._cleanup_old_backups(backup_dir)
-
         return backup_path
-
-    def _cleanup_old_backups(self, backup_dir: Path) -> None:
-        """Remove old backups, keeping only the most recent MAX_BACKUPS."""
-        backups = sorted(
-            backup_dir.glob("discovery_*.db"),
-            key=lambda p: self._parse_backup_timestamp(p) or datetime.fromtimestamp(p.stat().st_mtime),
-            reverse=True,
-        )
-
-        for old_backup in backups[MAX_BACKUPS:]:
-            old_backup.unlink()
 
     def list_backups(self) -> list[dict]:
         """List available backups.
@@ -176,61 +150,7 @@ class Database:
         Returns:
             List of dicts with backup info (path, timestamp, reason, size)
         """
-        backup_dir = BACKUP_DIR
-        if self.db_path != DEFAULT_DB_PATH:
-            backup_dir = self.db_path.parent / "backups"
-
-        if not backup_dir.exists():
-            return []
-
-        backups = []
-        for backup_file in sorted(
-            backup_dir.glob("discovery_*.db"),
-            key=lambda p: self._parse_backup_timestamp(p) or datetime.fromtimestamp(p.stat().st_mtime),
-            reverse=True,
-        ):
-            reason = self._parse_backup_reason(backup_file)
-            timestamp = self._parse_backup_timestamp(backup_file) or datetime.fromtimestamp(backup_file.stat().st_mtime)
-
-            backups.append(
-                {
-                    "path": backup_file,
-                    "timestamp": timestamp,
-                    "reason": reason,
-                    "size_kb": backup_file.stat().st_size // 1024,
-                }
-            )
-
-        return backups
-
-    def _parse_backup_timestamp(self, backup_file: Path) -> datetime | None:
-        """Parse timestamp from backup filename (supports legacy and microsecond formats)."""
-        parts = backup_file.stem.split("_")
-        if len(parts) < 4:
-            return None
-
-        date_str = parts[1]
-        time_str = parts[2]
-        if len(parts) >= 5 and parts[3].isdigit():
-            micros = parts[3]
-            fmt = "%Y%m%d_%H%M%S_%f"
-            ts = f"{date_str}_{time_str}_{micros}"
-        else:
-            fmt = "%Y%m%d_%H%M%S"
-            ts = f"{date_str}_{time_str}"
-
-        try:
-            return datetime.strptime(ts, fmt)
-        except ValueError:
-            return None
-
-    def _parse_backup_reason(self, backup_file: Path) -> str:
-        parts = backup_file.stem.split("_")
-        if len(parts) >= 5 and parts[3].isdigit():
-            return "_".join(parts[4:])
-        if len(parts) >= 4:
-            return "_".join(parts[3:])
-        return "unknown"
+        return self.backups.list_backups()
 
     def restore_backup(self, backup_path: Path) -> bool:
         """Restore database from a backup.
@@ -249,7 +169,9 @@ class Database:
 
         # Close connection, replace file, reopen
         self.conn.close()
-        shutil.copy2(backup_path, self.db_path)
+        if not self.backups.restore_backup(backup_path):
+            self.conn = duckdb.connect(str(self.db_path))
+            return False
         self.conn = duckdb.connect(str(self.db_path))
 
         return True
