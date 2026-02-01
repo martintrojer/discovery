@@ -234,7 +234,8 @@ class TestLoveCommand:
         result = runner.invoke(cli, ["love", "Nonexistent"])
 
         assert result.exit_code == 0
-        assert "No items found" in result.output
+        assert "No items found matching" in result.output
+        assert cli_db.get_all_loved_items() == []
 
 
 class TestDislikeCommand:

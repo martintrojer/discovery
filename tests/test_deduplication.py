@@ -9,6 +9,7 @@ from click.testing import CliRunner
 
 from discovery.cli import cli
 from discovery.db import Database
+from discovery.importers.base import BaseImporter
 from discovery.importers.spotify import SpotifyImporter
 from discovery.models import Category, Item, ItemSource, Source
 
@@ -344,10 +345,27 @@ class TestFuzzyDeduplication:
         db.upsert_item(Item(id="1", category=Category.MOVIE, title="Matrix", creator="Wachowskis"))
         db.upsert_item_source(ItemSource(item_id="1", source=Source.MANUAL, source_id="1"))
 
-        # Add 'The Matrix' - should not create duplicate if properly normalized
-        existing = db.search_items("Matrix", category=Category.MOVIE)
-        assert len(existing) >= 1
+        class _Importer(BaseImporter):
+            source = Source.SPOTIFY
+            category = Category.MOVIE
 
+            def __init__(self, db: Database) -> None:
+                super().__init__(db)
+
+            def get_manual_steps(self) -> str:
+                return ""
+
+            def parse_file(self, file_path: Path) -> list[tuple[Item, ItemSource]]:
+                item = Item(id="2", category=Category.MOVIE, title="The Matrix", creator="Wachowskis")
+                item_source = ItemSource(item_id="2", source=Source.SPOTIFY, source_id="sp:matrix")
+                return [(item, item_source)]
+
+        importer = _Importer(db)
+        result = importer.import_from_file(tmp_path / "dummy.csv")
+
+        assert result.items_added == 0
+        assert result.items_updated == 1
+        assert len(db.get_items_by_category(Category.MOVIE)) == 1
         db.close()
 
     def test_case_insensitive_matching(self, tmp_path: Path) -> None:
@@ -357,9 +375,25 @@ class TestFuzzyDeduplication:
 
         db.upsert_item(Item(id="1", category=Category.GAME, title="Dark Souls", creator="FromSoftware"))
 
-        # Search should find regardless of case
-        results = db.search_items("DARK SOULS")
-        assert len(results) == 1
-        assert results[0].title == "Dark Souls"
+        class _Importer(BaseImporter):
+            source = Source.SPOTIFY
+            category = Category.GAME
 
+            def __init__(self, db: Database) -> None:
+                super().__init__(db)
+
+            def get_manual_steps(self) -> str:
+                return ""
+
+            def parse_file(self, file_path: Path) -> list[tuple[Item, ItemSource]]:
+                item = Item(id="2", category=Category.GAME, title="dark souls", creator="FromSoftware")
+                item_source = ItemSource(item_id="2", source=Source.SPOTIFY, source_id="sp:dark-souls")
+                return [(item, item_source)]
+
+        importer = _Importer(db)
+        result = importer.import_from_file(tmp_path / "dummy.csv")
+
+        assert result.items_added == 0
+        assert result.items_updated == 1
+        assert len(db.get_items_by_category(Category.GAME)) == 1
         db.close()

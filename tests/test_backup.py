@@ -177,6 +177,11 @@ class TestBackupCLI:
         assert result.exit_code == 0
         assert "Database restored" in result.output
 
+        db = Database(db_path=db_path)
+        assert db.get_item("1") is not None
+        assert db.get_item("2") is None
+        db.close()
+
 
 class TestImportCreatesBackup:
     """Test that imports create backups."""
