@@ -7,18 +7,18 @@ from discovery.models import Category, Item, ItemSource, Rating, Source, Wishlis
 
 
 class TestDatabaseInit:
-    def test_creates_db_file(self, tmp_db_path: Path):
+    def test_creates_db_file(self, tmp_db_path: Path) -> None:
         db = Database(db_path=tmp_db_path)
         assert tmp_db_path.exists()
         db.close()
 
-    def test_creates_parent_directory(self, tmp_path: Path):
+    def test_creates_parent_directory(self, tmp_path: Path) -> None:
         nested_path = tmp_path / "nested" / "dir" / "test.db"
         db = Database(db_path=nested_path)
         assert nested_path.exists()
         db.close()
 
-    def test_context_manager(self, tmp_path: Path):
+    def test_context_manager(self, tmp_path: Path) -> None:
         db_path = tmp_path / "context.db"
         with Database(db_path=db_path) as db:
             db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test"))
@@ -32,7 +32,7 @@ class TestDatabaseInit:
 
 
 class TestItemOperations:
-    def test_upsert_and_get_item(self, db: Database):
+    def test_upsert_and_get_item(self, db: Database) -> None:
         item = Item(
             id="item-1",
             category=Category.MUSIC,
@@ -50,11 +50,11 @@ class TestItemOperations:
         assert retrieved.creator == "Test Artist"
         assert retrieved.metadata == {"album": "Test Album"}
 
-    def test_get_nonexistent_item(self, db: Database):
+    def test_get_nonexistent_item(self, db: Database) -> None:
         result = db.get_item("nonexistent")
         assert result is None
 
-    def test_upsert_updates_existing(self, db: Database):
+    def test_upsert_updates_existing(self, db: Database) -> None:
         item = Item(id="item-1", category=Category.MUSIC, title="Original Title")
         db.upsert_item(item)
 
@@ -65,7 +65,7 @@ class TestItemOperations:
         assert retrieved is not None
         assert retrieved.title == "Updated Title"
 
-    def test_search_items_by_title(self, db: Database):
+    def test_search_items_by_title(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Dark Side of the Moon"))
         db.upsert_item(Item(id="2", category=Category.MUSIC, title="The Dark Knight"))
         db.upsert_item(Item(id="3", category=Category.MUSIC, title="Light of Day"))
@@ -76,7 +76,7 @@ class TestItemOperations:
         assert "Dark Side of the Moon" in titles
         assert "The Dark Knight" in titles
 
-    def test_search_items_by_creator(self, db: Database):
+    def test_search_items_by_creator(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song A", creator="Pink Floyd"))
         db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song B", creator="Floyd Patterson"))
         db.upsert_item(Item(id="3", category=Category.MUSIC, title="Song C", creator="The Beatles"))
@@ -84,7 +84,7 @@ class TestItemOperations:
         results = db.search_items("floyd")
         assert len(results) == 2
 
-    def test_search_items_by_category(self, db: Database):
+    def test_search_items_by_category(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Dark Song"))
         db.upsert_item(Item(id="2", category=Category.GAME, title="Dark Souls"))
 
@@ -92,7 +92,7 @@ class TestItemOperations:
         assert len(music_results) == 1
         assert music_results[0].title == "Dark Song"
 
-    def test_search_items_loved_only(self, db: Database):
+    def test_search_items_loved_only(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Dark Song 1"))
         db.upsert_item(Item(id="2", category=Category.MUSIC, title="Dark Song 2"))
         db.upsert_rating(Rating(item_id="1", loved=True))
@@ -101,7 +101,7 @@ class TestItemOperations:
         assert len(results) == 1
         assert results[0].id == "1"
 
-    def test_get_items_by_category(self, db: Database):
+    def test_get_items_by_category(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song"))
         db.upsert_item(Item(id="2", category=Category.GAME, title="Game"))
         db.upsert_item(Item(id="3", category=Category.MUSIC, title="Another Song"))
@@ -112,7 +112,7 @@ class TestItemOperations:
         games = db.get_items_by_category(Category.GAME)
         assert len(games) == 1
 
-    def test_get_all_loved_items(self, db: Database):
+    def test_get_all_loved_items(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song 2"))
         db.upsert_item(Item(id="3", category=Category.MUSIC, title="Song 3"))
@@ -129,7 +129,7 @@ class TestItemOperations:
         assert "1" in loved_ids
         assert "2" in loved_ids
 
-    def test_get_all_disliked_items(self, db: Database):
+    def test_get_all_disliked_items(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song 2"))
         db.upsert_item(Item(id="3", category=Category.MUSIC, title="Song 3"))
@@ -141,7 +141,7 @@ class TestItemOperations:
         assert len(disliked) == 1
         assert disliked[0].id == "2"
 
-    def test_get_all_disliked_items_with_category_filter(self, db: Database):
+    def test_get_all_disliked_items_with_category_filter(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Bad Song"))
         db.upsert_item(Item(id="2", category=Category.MOVIE, title="Bad Movie"))
         db.upsert_item(Item(id="3", category=Category.GAME, title="Bad Game"))
@@ -165,7 +165,7 @@ class TestItemOperations:
 
 
 class TestItemSourceOperations:
-    def test_upsert_and_get_item_source(self, db: Database):
+    def test_upsert_and_get_item_source(self, db: Database) -> None:
         db.upsert_item(Item(id="item-1", category=Category.MUSIC, title="Test"))
 
         source = ItemSource(
@@ -184,7 +184,7 @@ class TestItemSourceOperations:
         assert sources[0].source_loved is True
         assert sources[0].source_data == {"play_count": 100}
 
-    def test_find_item_by_source(self, db: Database):
+    def test_find_item_by_source(self, db: Database) -> None:
         db.upsert_item(Item(id="item-1", category=Category.MUSIC, title="Test Song"))
         db.upsert_item_source(ItemSource(item_id="item-1", source=Source.SPOTIFY, source_id="spotify:123"))
 
@@ -195,7 +195,7 @@ class TestItemSourceOperations:
         not_found = db.find_item_by_source(Source.SPOTIFY, "spotify:999")
         assert not_found is None
 
-    def test_multiple_sources_per_item(self, db: Database):
+    def test_multiple_sources_per_item(self, db: Database) -> None:
         db.upsert_item(Item(id="item-1", category=Category.MUSIC, title="Test"))
 
         db.upsert_item_source(ItemSource(item_id="item-1", source=Source.SPOTIFY, source_id="sp:1"))
@@ -209,7 +209,7 @@ class TestItemSourceOperations:
 
 
 class TestRatingOperations:
-    def test_upsert_and_get_rating(self, db: Database):
+    def test_upsert_and_get_rating(self, db: Database) -> None:
         db.upsert_item(Item(id="item-1", category=Category.MUSIC, title="Test"))
 
         rating = Rating(item_id="item-1", loved=True, rating=5, notes="Amazing!")
@@ -221,11 +221,11 @@ class TestRatingOperations:
         assert retrieved.rating == 5
         assert retrieved.notes == "Amazing!"
 
-    def test_get_nonexistent_rating(self, db: Database):
+    def test_get_nonexistent_rating(self, db: Database) -> None:
         result = db.get_rating("nonexistent")
         assert result is None
 
-    def test_upsert_updates_existing_rating(self, db: Database):
+    def test_upsert_updates_existing_rating(self, db: Database) -> None:
         db.upsert_item(Item(id="item-1", category=Category.MUSIC, title="Test"))
 
         db.upsert_rating(Rating(item_id="item-1", loved=True, rating=4))
@@ -237,7 +237,7 @@ class TestRatingOperations:
 
 
 class TestWishlistOperations:
-    def test_add_and_get_wishlist_item(self, db: Database):
+    def test_add_and_get_wishlist_item(self, db: Database) -> None:
         wishlist_item = WishlistItem(
             id="wish-1",
             category=Category.MOVIE,
@@ -253,7 +253,7 @@ class TestWishlistOperations:
         assert retrieved.creator == "Christopher Nolan"
         assert retrieved.notes == "Rewatch in IMAX"
 
-    def test_get_wishlist_items_by_category(self, db: Database):
+    def test_get_wishlist_items_by_category(self, db: Database) -> None:
         db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="Album A"))
         db.add_wishlist_item(WishlistItem(id="2", category=Category.BOOK, title="Book B"))
         db.add_wishlist_item(WishlistItem(id="3", category=Category.MUSIC, title="Album C"))
@@ -264,7 +264,7 @@ class TestWishlistOperations:
         assert "Album A" in titles
         assert "Album C" in titles
 
-    def test_search_wishlist_items(self, db: Database):
+    def test_search_wishlist_items(self, db: Database) -> None:
         db.add_wishlist_item(WishlistItem(id="1", category=Category.TV, title="The Wire", creator="David Simon"))
         db.add_wishlist_item(WishlistItem(id="2", category=Category.TV, title="The Bear", creator="Christopher Storer"))
 
@@ -276,7 +276,7 @@ class TestWishlistOperations:
         assert len(creator_results) == 1
         assert creator_results[0].title == "The Bear"
 
-    def test_remove_wishlist_item(self, db: Database):
+    def test_remove_wishlist_item(self, db: Database) -> None:
         db.add_wishlist_item(WishlistItem(id="1", category=Category.GAME, title="Hades II"))
 
         removed = db.remove_wishlist_item("1")
@@ -288,7 +288,7 @@ class TestWishlistOperations:
 
 
 class TestAnalyticsQueries:
-    def test_get_category_stats(self, db: Database):
+    def test_get_category_stats(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song 2"))
         db.upsert_item(Item(id="3", category=Category.GAME, title="Game 1"))
@@ -301,7 +301,7 @@ class TestAnalyticsQueries:
         assert stats["game"]["total"] == 1
         assert stats["game"]["loved"] == 0
 
-    def test_get_source_stats(self, db: Database):
+    def test_get_source_stats(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song 2"))
 

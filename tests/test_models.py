@@ -6,7 +6,7 @@ from discovery.models import Category, Item, ItemSource, Rating, Source, Wishlis
 
 
 class TestCategory:
-    def test_category_values(self):
+    def test_category_values(self) -> None:
         assert Category.MUSIC.value == "music"
         assert Category.GAME.value == "game"
         assert Category.BOOK.value == "book"
@@ -15,26 +15,26 @@ class TestCategory:
         assert Category.PAPER.value == "paper"
         assert Category.PODCAST.value == "podcast"
 
-    def test_category_from_string(self):
+    def test_category_from_string(self) -> None:
         assert Category("music") == Category.MUSIC
         assert Category("game") == Category.GAME
 
 
 class TestSource:
-    def test_source_values(self):
+    def test_source_values(self) -> None:
         assert Source.APPLE_MUSIC.value == "apple_music"
         assert Source.SPOTIFY.value == "spotify"
         assert Source.STEAM.value == "steam"
         assert Source.NETFLIX.value == "netflix"
         assert Source.MANUAL.value == "manual"
 
-    def test_source_from_string(self):
+    def test_source_from_string(self) -> None:
         assert Source("spotify") == Source.SPOTIFY
         assert Source("manual") == Source.MANUAL
 
 
 class TestItem:
-    def test_create_minimal_item(self):
+    def test_create_minimal_item(self) -> None:
         item = Item(id="test-1", category=Category.MUSIC, title="Test Song")
         assert item.id == "test-1"
         assert item.category == Category.MUSIC
@@ -44,7 +44,7 @@ class TestItem:
         assert isinstance(item.created_at, datetime)
         assert isinstance(item.updated_at, datetime)
 
-    def test_create_full_item(self):
+    def test_create_full_item(self) -> None:
         item = Item(
             id="test-2",
             category=Category.GAME,
@@ -60,7 +60,7 @@ class TestItem:
 
 
 class TestItemSource:
-    def test_create_item_source(self):
+    def test_create_item_source(self) -> None:
         source = ItemSource(
             item_id="item-1",
             source=Source.SPOTIFY,
@@ -76,7 +76,7 @@ class TestItemSource:
 
 
 class TestRating:
-    def test_create_rating(self):
+    def test_create_rating(self) -> None:
         rating = Rating(
             item_id="item-1",
             loved=True,
@@ -88,7 +88,7 @@ class TestRating:
         assert rating.rating == 5
         assert rating.notes == "Great!"
 
-    def test_rating_defaults(self):
+    def test_rating_defaults(self) -> None:
         rating = Rating(item_id="item-1")
         assert rating.loved is None
         assert rating.rating is None
@@ -96,7 +96,7 @@ class TestRating:
 
 
 class TestWishlistItem:
-    def test_create_wishlist_item(self):
+    def test_create_wishlist_item(self) -> None:
         item = WishlistItem(
             id="wish-1",
             category=Category.BOOK,

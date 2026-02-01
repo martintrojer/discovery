@@ -13,7 +13,7 @@ MAX_BACKUPS = 10  # Keep last 10 backups
 class BackupManager:
     """Handle database backup operations for a given database path."""
 
-    def __init__(self, db_path: Path, default_db_path: Path, default_backup_dir: Path = DEFAULT_BACKUP_DIR):
+    def __init__(self, db_path: Path, default_db_path: Path, default_backup_dir: Path = DEFAULT_BACKUP_DIR) -> None:
         self.db_path = db_path
         self.default_db_path = default_db_path
         self.default_backup_dir = default_backup_dir

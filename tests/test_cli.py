@@ -1,6 +1,7 @@
 """Integration tests for CLI commands."""
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -12,13 +13,13 @@ from discovery.models import Category, Item, Rating, WishlistItem
 
 
 @pytest.fixture
-def runner():
+def runner() -> CliRunner:
     """Create a CLI test runner."""
     return CliRunner()
 
 
 @pytest.fixture
-def cli_db(tmp_path: Path, monkeypatch):
+def cli_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Database]:
     """Create a temporary database and patch the CLI to use it."""
     db_path = tmp_path / "test.db"
 
@@ -33,7 +34,7 @@ def cli_db(tmp_path: Path, monkeypatch):
 
 
 class TestStatusCommand:
-    def test_status_empty_library(self, runner: CliRunner, cli_db: Database):
+    def test_status_empty_library(self, runner: CliRunner, cli_db: Database) -> None:
         result = runner.invoke(cli, ["status"])
 
         assert result.exit_code == 0
@@ -41,7 +42,7 @@ class TestStatusCommand:
         assert "Total items: 0" in result.output
         assert "Wishlist: 0" in result.output
 
-    def test_status_with_items(self, runner: CliRunner, cli_db: Database):
+    def test_status_with_items(self, runner: CliRunner, cli_db: Database) -> None:
         # Add some items
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         cli_db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song 2"))
@@ -54,7 +55,7 @@ class TestStatusCommand:
         assert "2 items" in result.output
         assert "1 loved" in result.output
 
-    def test_status_json_format(self, runner: CliRunner, cli_db: Database):
+    def test_status_json_format(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         cli_db.upsert_rating(Rating(item_id="1", loved=True))
         cli_db.add_wishlist_item(WishlistItem(id="w1", category=Category.MUSIC, title="Wish 1"))
@@ -72,7 +73,7 @@ class TestStatusCommand:
 
 
 class TestAddCommand:
-    def test_add_basic_item(self, runner: CliRunner, cli_db: Database):
+    def test_add_basic_item(self, runner: CliRunner, cli_db: Database) -> None:
         result = runner.invoke(cli, ["add", "Test Movie", "-c", "movie"])
 
         assert result.exit_code == 0
@@ -83,7 +84,7 @@ class TestAddCommand:
         assert len(items) == 1
         assert items[0].title == "Test Movie"
 
-    def test_add_with_creator(self, runner: CliRunner, cli_db: Database):
+    def test_add_with_creator(self, runner: CliRunner, cli_db: Database) -> None:
         result = runner.invoke(cli, ["add", "Inception", "-c", "movie", "-a", "Christopher Nolan"])
 
         assert result.exit_code == 0
@@ -92,7 +93,7 @@ class TestAddCommand:
         items = cli_db.get_items_by_category(Category.MOVIE)
         assert items[0].creator == "Christopher Nolan"
 
-    def test_add_loved_item(self, runner: CliRunner, cli_db: Database):
+    def test_add_loved_item(self, runner: CliRunner, cli_db: Database) -> None:
         result = runner.invoke(cli, ["add", "Great Game", "-c", "game", "-l"])
 
         assert result.exit_code == 0
@@ -101,7 +102,7 @@ class TestAddCommand:
         loved = cli_db.get_all_loved_items()
         assert len(loved) == 1
 
-    def test_add_disliked_item(self, runner: CliRunner, cli_db: Database):
+    def test_add_disliked_item(self, runner: CliRunner, cli_db: Database) -> None:
         result = runner.invoke(cli, ["add", "Bad Movie", "-c", "movie", "-d"])
 
         assert result.exit_code == 0
@@ -110,20 +111,20 @@ class TestAddCommand:
         disliked = cli_db.get_all_disliked_items()
         assert len(disliked) == 1
 
-    def test_add_with_rating(self, runner: CliRunner, cli_db: Database):
+    def test_add_with_rating(self, runner: CliRunner, cli_db: Database) -> None:
         result = runner.invoke(cli, ["add", "Great Book", "-c", "book", "-l", "-r", "5"])
 
         assert result.exit_code == 0
         assert "Rating: [*****]" in result.output
 
-    def test_add_duplicate_rejected(self, runner: CliRunner, cli_db: Database):
+    def test_add_duplicate_rejected(self, runner: CliRunner, cli_db: Database) -> None:
         runner.invoke(cli, ["add", "Test", "-c", "movie"])
         result = runner.invoke(cli, ["add", "Test", "-c", "movie"])
 
         assert result.exit_code == 0
         assert "already exists" in result.output
 
-    def test_add_force_skips_duplicate_check(self, runner: CliRunner, cli_db: Database):
+    def test_add_force_skips_duplicate_check(self, runner: CliRunner, cli_db: Database) -> None:
         runner.invoke(cli, ["add", "Test Movie", "-c", "movie"])
         # Force add same item
         result = runner.invoke(cli, ["add", "Test Movie", "-c", "movie", "-f"])
@@ -136,7 +137,7 @@ class TestAddCommand:
 
 
 class TestUpdateCommand:
-    def test_update_creator(self, runner: CliRunner, cli_db: Database):
+    def test_update_creator(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.GAME, title="Elden Ring"))
 
         result = runner.invoke(cli, ["update", "Elden Ring", "-a", "FromSoftware"])
@@ -148,7 +149,7 @@ class TestUpdateCommand:
         assert item is not None
         assert item.creator == "FromSoftware"
 
-    def test_update_title(self, runner: CliRunner, cli_db: Database):
+    def test_update_title(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MOVIE, title="The Matrx"))
 
         result = runner.invoke(cli, ["update", "Matrx", "-t", "The Matrix"])
@@ -159,7 +160,7 @@ class TestUpdateCommand:
         assert item is not None
         assert item.title == "The Matrix"
 
-    def test_update_rating(self, runner: CliRunner, cli_db: Database):
+    def test_update_rating(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.BOOK, title="Test Book"))
 
         result = runner.invoke(cli, ["update", "Test Book", "-r", "5"])
@@ -170,7 +171,7 @@ class TestUpdateCommand:
         assert rating is not None
         assert rating.rating == 5
 
-    def test_update_loved_status(self, runner: CliRunner, cli_db: Database):
+    def test_update_loved_status(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song"))
 
         result = runner.invoke(cli, ["update", "Test Song", "-l"])
@@ -180,7 +181,7 @@ class TestUpdateCommand:
         loved = cli_db.get_all_loved_items()
         assert len(loved) == 1
 
-    def test_update_unlove(self, runner: CliRunner, cli_db: Database):
+    def test_update_unlove(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.GAME, title="Test Game"))
         cli_db.upsert_rating(Rating(item_id="1", loved=True))
 
@@ -193,14 +194,14 @@ class TestUpdateCommand:
         assert rating is not None
         assert rating.loved is None
 
-    def test_update_notes(self, runner: CliRunner, cli_db: Database):
+    def test_update_notes(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.TV, title="Test Show"))
 
         result = runner.invoke(cli, ["update", "Test Show", "-n", "Great show!"])
 
         assert "Notes: Great show!" in result.output
 
-    def test_update_no_changes(self, runner: CliRunner, cli_db: Database):
+    def test_update_no_changes(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MOVIE, title="Test"))
 
         result = runner.invoke(cli, ["update", "Test"])
@@ -210,7 +211,7 @@ class TestUpdateCommand:
 
 
 class TestLoveCommand:
-    def test_love_item(self, runner: CliRunner, cli_db: Database):
+    def test_love_item(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.GAME, title="Elden Ring"))
 
         result = runner.invoke(cli, ["love", "Elden Ring"])
@@ -221,7 +222,7 @@ class TestLoveCommand:
         loved = cli_db.get_all_loved_items()
         assert len(loved) == 1
 
-    def test_love_with_rating(self, runner: CliRunner, cli_db: Database):
+    def test_love_with_rating(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.BOOK, title="Test Book"))
 
         result = runner.invoke(cli, ["love", "Test Book", "-r", "5"])
@@ -229,7 +230,7 @@ class TestLoveCommand:
         assert result.exit_code == 0
         assert "Rating: [*****]" in result.output
 
-    def test_love_not_found(self, runner: CliRunner, cli_db: Database):
+    def test_love_not_found(self, runner: CliRunner, cli_db: Database) -> None:
         result = runner.invoke(cli, ["love", "Nonexistent"])
 
         assert result.exit_code == 0
@@ -237,7 +238,7 @@ class TestLoveCommand:
 
 
 class TestDislikeCommand:
-    def test_dislike_item(self, runner: CliRunner, cli_db: Database):
+    def test_dislike_item(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.TV, title="Bad Show"))
 
         result = runner.invoke(cli, ["dislike", "Bad Show"])
@@ -248,7 +249,7 @@ class TestDislikeCommand:
         disliked = cli_db.get_all_disliked_items()
         assert len(disliked) == 1
 
-    def test_dislike_with_notes(self, runner: CliRunner, cli_db: Database):
+    def test_dislike_with_notes(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MOVIE, title="Bad Movie"))
 
         result = runner.invoke(cli, ["dislike", "Bad Movie", "-n", "Terrible ending"])
@@ -258,13 +259,13 @@ class TestDislikeCommand:
 
 
 class TestLovedCommand:
-    def test_loved_empty(self, runner: CliRunner, cli_db: Database):
+    def test_loved_empty(self, runner: CliRunner, cli_db: Database) -> None:
         result = runner.invoke(cli, ["loved"])
 
         assert result.exit_code == 0
         assert "No loved items" in result.output
 
-    def test_loved_lists_items(self, runner: CliRunner, cli_db: Database):
+    def test_loved_lists_items(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Great Song", creator="Artist"))
         cli_db.upsert_rating(Rating(item_id="1", loved=True))
 
@@ -274,7 +275,7 @@ class TestLovedCommand:
         assert "1 loved items" in result.output
         assert "Great Song" in result.output
 
-    def test_loved_filter_category(self, runner: CliRunner, cli_db: Database):
+    def test_loved_filter_category(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song"))
         cli_db.upsert_item(Item(id="2", category=Category.GAME, title="Game"))
         cli_db.upsert_rating(Rating(item_id="1", loved=True))
@@ -287,13 +288,13 @@ class TestLovedCommand:
 
 
 class TestDislikedCommand:
-    def test_disliked_empty(self, runner: CliRunner, cli_db: Database):
+    def test_disliked_empty(self, runner: CliRunner, cli_db: Database) -> None:
         result = runner.invoke(cli, ["disliked"])
 
         assert result.exit_code == 0
         assert "No disliked items" in result.output
 
-    def test_disliked_lists_items(self, runner: CliRunner, cli_db: Database):
+    def test_disliked_lists_items(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.TV, title="Bad Show"))
         cli_db.upsert_rating(Rating(item_id="1", loved=False))
 
@@ -305,7 +306,7 @@ class TestDislikedCommand:
 
 
 class TestWishlistCommands:
-    def test_wishlist_add(self, runner: CliRunner, cli_db: Database):
+    def test_wishlist_add(self, runner: CliRunner, cli_db: Database) -> None:
         result = runner.invoke(cli, ["wishlist", "add", "Dune", "-c", "book", "-a", "Frank Herbert"])
 
         assert result.exit_code == 0
@@ -315,7 +316,7 @@ class TestWishlistCommands:
         assert len(items) == 1
         assert items[0].title == "Dune"
 
-    def test_wishlist_add_duplicate(self, runner: CliRunner, cli_db: Database):
+    def test_wishlist_add_duplicate(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.BOOK, title="Dune", creator="Frank Herbert"))
 
         result = runner.invoke(cli, ["wishlist", "add", "Dune", "-c", "book", "-a", "Frank Herbert"])
@@ -326,7 +327,7 @@ class TestWishlistCommands:
         items = cli_db.get_wishlist_items(category=Category.BOOK)
         assert len(items) == 1
 
-    def test_wishlist_add_duplicate_without_creator(self, runner: CliRunner, cli_db: Database):
+    def test_wishlist_add_duplicate_without_creator(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.BOOK, title="Dune"))
 
         result = runner.invoke(cli, ["wishlist", "add", "Dune", "-c", "book"])
@@ -337,7 +338,7 @@ class TestWishlistCommands:
         items = cli_db.get_wishlist_items(category=Category.BOOK)
         assert len(items) == 1
 
-    def test_wishlist_view(self, runner: CliRunner, cli_db: Database):
+    def test_wishlist_view(self, runner: CliRunner, cli_db: Database) -> None:
         from discovery.models import WishlistItem
 
         cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="Album A"))
@@ -350,7 +351,7 @@ class TestWishlistCommands:
         assert "Album A" in result.output
         assert "Game B" in result.output
 
-    def test_wishlist_view_search_category(self, runner: CliRunner, cli_db: Database):
+    def test_wishlist_view_search_category(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="Album A", creator="Artist A"))
         cli_db.add_wishlist_item(WishlistItem(id="2", category=Category.GAME, title="Game B", creator="Studio B"))
 
@@ -360,7 +361,7 @@ class TestWishlistCommands:
         assert "Album A" in result.output
         assert "Game B" not in result.output
 
-    def test_wishlist_remove(self, runner: CliRunner, cli_db: Database):
+    def test_wishlist_remove(self, runner: CliRunner, cli_db: Database) -> None:
         from discovery.models import WishlistItem
 
         cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MOVIE, title="Blade Runner"))
@@ -371,7 +372,7 @@ class TestWishlistCommands:
         assert "Wishlist removed" in result.output
         assert cli_db.get_wishlist_item("1") is None
 
-    def test_wishlist_prune(self, runner: CliRunner, cli_db: Database):
+    def test_wishlist_prune(self, runner: CliRunner, cli_db: Database) -> None:
         from discovery.models import WishlistItem
 
         cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="The Wall"))
@@ -383,7 +384,7 @@ class TestWishlistCommands:
         assert "Pruned 1 wishlist item" in result.output
         assert cli_db.get_wishlist_item("1") is None
 
-    def test_wishlist_prune_creator_mismatch(self, runner: CliRunner, cli_db: Database):
+    def test_wishlist_prune_creator_mismatch(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="Halo", creator="Radiohead"))
         cli_db.upsert_item(Item(id="a", category=Category.MUSIC, title="Halo", creator="Dostoevsky"))
 
@@ -393,7 +394,7 @@ class TestWishlistCommands:
         assert "No wishlist items to prune" in result.output
         assert cli_db.get_wishlist_item("1") is not None
 
-    def test_auto_prune_on_add(self, runner: CliRunner, cli_db: Database):
+    def test_auto_prune_on_add(self, runner: CliRunner, cli_db: Database) -> None:
         from discovery.models import WishlistItem
 
         cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.BOOK, title="Dune"))
@@ -404,7 +405,7 @@ class TestWishlistCommands:
         assert "Pruned 1 wishlist item" in result.output
         assert cli_db.get_wishlist_item("1") is None
 
-    def test_auto_prune_on_import(self, runner: CliRunner, cli_db: Database, tmp_path: Path):
+    def test_auto_prune_on_import(self, runner: CliRunner, cli_db: Database, tmp_path: Path) -> None:
         cli_db.add_wishlist_item(WishlistItem(id="1", category=Category.MUSIC, title="Song A", creator="Artist"))
 
         data = {"tracks": [{"artist": "Artist", "album": "Album", "track": "Song A"}]}
@@ -419,7 +420,7 @@ class TestWishlistCommands:
 
 
 class TestQueryCommand:
-    def test_query_count(self, runner: CliRunner, cli_db: Database):
+    def test_query_count(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         cli_db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song 2"))
 
@@ -428,7 +429,7 @@ class TestQueryCommand:
         assert result.exit_code == 0
         assert "Count: 2" in result.output
 
-    def test_query_count_by_category(self, runner: CliRunner, cli_db: Database):
+    def test_query_count_by_category(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song"))
         cli_db.upsert_item(Item(id="2", category=Category.GAME, title="Game"))
 
@@ -437,7 +438,7 @@ class TestQueryCommand:
         assert result.exit_code == 0
         assert "Count (music): 1" in result.output
 
-    def test_query_loved(self, runner: CliRunner, cli_db: Database):
+    def test_query_loved(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Loved Song"))
         cli_db.upsert_item(Item(id="2", category=Category.MUSIC, title="Other Song"))
         cli_db.upsert_rating(Rating(item_id="1", loved=True))
@@ -448,7 +449,7 @@ class TestQueryCommand:
         assert "Loved Song" in result.output
         assert "Other Song" not in result.output
 
-    def test_query_disliked(self, runner: CliRunner, cli_db: Database):
+    def test_query_disliked(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MOVIE, title="Bad Movie"))
         cli_db.upsert_rating(Rating(item_id="1", loved=False))
 
@@ -457,7 +458,7 @@ class TestQueryCommand:
         assert result.exit_code == 0
         assert "Bad Movie" in result.output
 
-    def test_query_pagination(self, runner: CliRunner, cli_db: Database):
+    def test_query_pagination(self, runner: CliRunner, cli_db: Database) -> None:
         for i in range(30):
             cli_db.upsert_item(Item(id=str(i), category=Category.MUSIC, title=f"Song {i:02d}"))
 
@@ -467,7 +468,7 @@ class TestQueryCommand:
         assert "10 of 30" in result.output
         assert "--offset 10" in result.output
 
-    def test_query_json_format(self, runner: CliRunner, cli_db: Database):
+    def test_query_json_format(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song"))
 
         result = runner.invoke(cli, ["query", "-f", "json"])
@@ -480,7 +481,7 @@ class TestQueryCommand:
         assert "sources" in data["items"][0]
         assert "category" in data["items"][0]
 
-    def test_query_search(self, runner: CliRunner, cli_db: Database):
+    def test_query_search(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.GAME, title="Dark Souls"))
         cli_db.upsert_item(Item(id="2", category=Category.GAME, title="Elden Ring"))
 
@@ -490,7 +491,7 @@ class TestQueryCommand:
         assert "Dark Souls" in result.output
         assert "Elden Ring" not in result.output
 
-    def test_query_by_creator(self, runner: CliRunner, cli_db: Database):
+    def test_query_by_creator(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.GAME, title="Elden Ring", creator="FromSoftware"))
         cli_db.upsert_item(Item(id="2", category=Category.GAME, title="Zelda", creator="Nintendo"))
 
@@ -500,7 +501,7 @@ class TestQueryCommand:
         assert "Elden Ring" in result.output
         assert "Zelda" not in result.output
 
-    def test_query_shows_sources(self, runner: CliRunner, cli_db: Database):
+    def test_query_shows_sources(self, runner: CliRunner, cli_db: Database) -> None:
         from discovery.models import ItemSource, Source
 
         cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song"))
@@ -514,7 +515,7 @@ class TestQueryCommand:
 
 
 class TestImportCommands:
-    def test_import_help_setup(self, runner: CliRunner, cli_db: Database, tmp_path: Path):
+    def test_import_help_setup(self, runner: CliRunner, cli_db: Database, tmp_path: Path) -> None:
         # Create a dummy file since the argument is required
         dummy_file = tmp_path / "dummy.json"
         dummy_file.write_text("{}")
@@ -525,7 +526,7 @@ class TestImportCommands:
         assert result.exit_code == 0
         assert "Spotify" in result.output
 
-    def test_import_spotify(self, runner: CliRunner, cli_db: Database, tmp_path: Path):
+    def test_import_spotify(self, runner: CliRunner, cli_db: Database, tmp_path: Path) -> None:
         # Create test file
         data = {"tracks": [{"artist": "Artist", "album": "Album", "track": "Song"}]}
         file_path = tmp_path / "library.json"
@@ -536,7 +537,7 @@ class TestImportCommands:
         assert result.exit_code == 0
         assert "Added:   1" in result.output
 
-    def test_import_netflix(self, runner: CliRunner, cli_db: Database, tmp_path: Path):
+    def test_import_netflix(self, runner: CliRunner, cli_db: Database, tmp_path: Path) -> None:
         csv_content = """Title,Date
 "Breaking Bad: Season 1: Pilot","2024-01-01"
 """

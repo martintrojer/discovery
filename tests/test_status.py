@@ -6,7 +6,7 @@ from discovery.models import Category, Item, ItemSource, Rating, Source, Wishlis
 
 
 class TestGetLibraryStatus:
-    def test_empty_library(self, db: Database):
+    def test_empty_library(self, db: Database) -> None:
         result = get_library_status(db)
 
         assert result["totals"]["items"] == 0
@@ -14,7 +14,7 @@ class TestGetLibraryStatus:
         assert result["totals"]["disliked"] == 0
         assert result["totals"]["wishlist"] == 0
 
-    def test_with_items(self, db: Database):
+    def test_with_items(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song 2"))
         db.upsert_item(Item(id="3", category=Category.GAME, title="Game 1"))
@@ -27,7 +27,7 @@ class TestGetLibraryStatus:
         assert result["categories"]["game"]["total"] == 1
         assert result["categories"]["music"]["wishlist"] == 1
 
-    def test_with_loved_items(self, db: Database):
+    def test_with_loved_items(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Loved Song"))
         db.upsert_rating(Rating(item_id="1", loved=True))
 
@@ -36,7 +36,7 @@ class TestGetLibraryStatus:
         assert result["totals"]["loved"] == 1
         assert result["categories"]["music"]["loved"] == 1
 
-    def test_with_source_loved(self, db: Database):
+    def test_with_source_loved(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Source Loved Song"))
         db.upsert_item_source(ItemSource(item_id="1", source=Source.SPOTIFY, source_id="123", source_loved=True))
 
@@ -45,7 +45,7 @@ class TestGetLibraryStatus:
         assert result["totals"]["loved"] == 1
         assert result["categories"]["music"]["loved"] == 1
 
-    def test_with_disliked_items(self, db: Database):
+    def test_with_disliked_items(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MOVIE, title="Bad Movie"))
         db.upsert_rating(Rating(item_id="1", loved=False))
 
@@ -54,7 +54,7 @@ class TestGetLibraryStatus:
         assert result["totals"]["disliked"] == 1
         assert result["categories"]["movie"]["disliked"] == 1
 
-    def test_sample_loved_items(self, db: Database):
+    def test_sample_loved_items(self, db: Database) -> None:
         # Create loved items
         for i in range(15):
             db.upsert_item(Item(id=str(i), category=Category.GAME, title=f"Game {i}"))
@@ -66,7 +66,7 @@ class TestGetLibraryStatus:
         assert len(result["sample_loved"]["game"]) <= 10
         assert result["sample_loved"]["game"][0]["title"].startswith("Game")
 
-    def test_sample_wishlist_items(self, db: Database):
+    def test_sample_wishlist_items(self, db: Database) -> None:
         for i in range(12):
             db.add_wishlist_item(WishlistItem(id=str(i), category=Category.BOOK, title=f"Book {i}"))
 
@@ -75,7 +75,7 @@ class TestGetLibraryStatus:
         assert len(result["sample_wishlist"]["book"]) <= 10
         assert result["sample_wishlist"]["book"][0]["title"].startswith("Book")
 
-    def test_sources_tracked(self, db: Database):
+    def test_sources_tracked(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song"))
         db.upsert_item_source(ItemSource(item_id="1", source=Source.SPOTIFY, source_id="123"))
 
@@ -86,13 +86,13 @@ class TestGetLibraryStatus:
 
 
 class TestFormatStatusText:
-    def test_empty_library(self, db: Database):
+    def test_empty_library(self, db: Database) -> None:
         result = format_status_text(db)
 
         assert "Discovery Library Status" in result
         assert "Total items: 0" in result
 
-    def test_with_items(self, db: Database):
+    def test_with_items(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song", creator="Artist"))
         db.upsert_rating(Rating(item_id="1", loved=True))
         db.add_wishlist_item(WishlistItem(id="w1", category=Category.MUSIC, title="Wishlist Song"))
@@ -107,7 +107,7 @@ class TestFormatStatusText:
         assert "Sample Wishlist Items" in result
         assert "Wishlist Song" in result
 
-    def test_includes_next_steps(self, db: Database):
+    def test_includes_next_steps(self, db: Database) -> None:
         result = format_status_text(db)
 
         assert "Next Steps" in result

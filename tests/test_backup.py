@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from discovery.cli import cli
@@ -12,7 +13,7 @@ from discovery.models import Category, Item
 class TestDatabaseBackup:
     """Test database backup operations."""
 
-    def test_create_backup(self, tmp_path: Path):
+    def test_create_backup(self, tmp_path: Path) -> None:
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)
 
@@ -26,7 +27,7 @@ class TestDatabaseBackup:
         assert "test" in backup_path.name
         db.close()
 
-    def test_create_backup_no_db(self, tmp_path: Path):
+    def test_create_backup_no_db(self, tmp_path: Path) -> None:
         db_path = tmp_path / "nonexistent.db"
         # Don't create any data, so the db file won't exist
         db = Database(db_path=db_path)
@@ -40,7 +41,7 @@ class TestDatabaseBackup:
         assert backup_path is not None  # File exists after init
         db.close()
 
-    def test_list_backups_empty(self, tmp_path: Path):
+    def test_list_backups_empty(self, tmp_path: Path) -> None:
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)
 
@@ -49,7 +50,7 @@ class TestDatabaseBackup:
         assert backups == []
         db.close()
 
-    def test_list_backups(self, tmp_path: Path):
+    def test_list_backups(self, tmp_path: Path) -> None:
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)
         db.upsert_item(Item(id="1", category=Category.GAME, title="Test"))
@@ -64,7 +65,7 @@ class TestDatabaseBackup:
         assert backups[1]["reason"] == "first"
         db.close()
 
-    def test_restore_backup(self, tmp_path: Path):
+    def test_restore_backup(self, tmp_path: Path) -> None:
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)
 
@@ -89,7 +90,7 @@ class TestDatabaseBackup:
         assert db.get_item("1") is not None
         db.close()
 
-    def test_backup_cleanup_old(self, tmp_path: Path):
+    def test_backup_cleanup_old(self, tmp_path: Path) -> None:
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)
         db.upsert_item(Item(id="1", category=Category.GAME, title="Test"))
@@ -108,7 +109,7 @@ class TestDatabaseBackup:
 class TestBackupCLI:
     """Test backup CLI commands."""
 
-    def test_backup_create(self, tmp_path: Path, monkeypatch):
+    def test_backup_create(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         import discovery.db as db_module
 
         db_path = tmp_path / "test.db"
@@ -125,7 +126,7 @@ class TestBackupCLI:
         assert result.exit_code == 0
         assert "Backup created" in result.output
 
-    def test_backup_list_empty(self, tmp_path: Path, monkeypatch):
+    def test_backup_list_empty(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         import discovery.db as db_module
 
         db_path = tmp_path / "test.db"
@@ -138,7 +139,7 @@ class TestBackupCLI:
         assert result.exit_code == 0
         assert "No backups found" in result.output
 
-    def test_backup_list_with_backups(self, tmp_path: Path, monkeypatch):
+    def test_backup_list_with_backups(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         import discovery.db as db_module
 
         db_path = tmp_path / "test.db"
@@ -157,7 +158,7 @@ class TestBackupCLI:
         assert "1 backup(s) available" in result.output
         assert "test_backup" in result.output
 
-    def test_backup_restore(self, tmp_path: Path, monkeypatch):
+    def test_backup_restore(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         import discovery.db as db_module
 
         db_path = tmp_path / "test.db"
@@ -180,7 +181,7 @@ class TestBackupCLI:
 class TestImportCreatesBackup:
     """Test that imports create backups."""
 
-    def test_import_creates_backup(self, tmp_path: Path, monkeypatch):
+    def test_import_creates_backup(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         import json
 
         import discovery.db as db_module

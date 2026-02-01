@@ -30,5 +30,8 @@ line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "I", "UP", "B", "ANN"]
 ignore = ["E501"]  # Line length handled by formatter
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true

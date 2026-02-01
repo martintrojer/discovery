@@ -15,7 +15,7 @@ class SpotifyImporter(BaseImporter):
     source = Source.SPOTIFY
     category = Category.MUSIC
 
-    def __init__(self, db: Database):
+    def __init__(self, db: Database) -> None:
         super().__init__(db)
 
     def get_manual_steps(self) -> str:

@@ -15,7 +15,7 @@ class DisneyPlusImporter(BaseImporter):
     source = Source.DISNEY_PLUS
     category = Category.MOVIE
 
-    def __init__(self, db: Database):
+    def __init__(self, db: Database) -> None:
         super().__init__(db)
 
     def get_manual_steps(self) -> str:

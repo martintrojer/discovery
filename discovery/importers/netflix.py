@@ -17,7 +17,7 @@ class NetflixImporter(BaseImporter):
     source = Source.NETFLIX
     category = Category.MOVIE  # Will also handle TV
 
-    def __init__(self, db: Database):
+    def __init__(self, db: Database) -> None:
         super().__init__(db)
 
     def get_manual_steps(self) -> str:

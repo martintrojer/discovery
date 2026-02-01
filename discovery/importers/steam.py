@@ -16,7 +16,7 @@ class SteamImporter(BaseImporter):
     source = Source.STEAM
     category = Category.GAME
 
-    def __init__(self, db: Database, api_key: str | None = None, steam_id: str | None = None):
+    def __init__(self, db: Database, api_key: str | None = None, steam_id: str | None = None) -> None:
         super().__init__(db)
         self.api_key = api_key
         self.steam_id = steam_id

@@ -14,7 +14,7 @@ class AppleMusicImporter(BaseImporter):
     source = Source.APPLE_MUSIC
     category = Category.MUSIC
 
-    def __init__(self, db: Database):
+    def __init__(self, db: Database) -> None:
         super().__init__(db)
 
     def get_manual_steps(self) -> str:
@@ -137,7 +137,7 @@ songs in Apple Music to help with discovery recommendations.
 
         return result
 
-    def _parse_value(self, elem: ET.Element):
+    def _parse_value(self, elem: ET.Element) -> str | int | bool | None:
         """Parse an iTunes plist value element."""
         if elem.tag == "string":
             return elem.text or ""

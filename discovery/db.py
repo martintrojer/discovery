@@ -2,7 +2,8 @@
 
 import json
 from pathlib import Path
-from typing import Any
+from types import TracebackType
+from typing import Any, Self
 
 import duckdb
 
@@ -16,7 +17,7 @@ BACKUP_DIR = DEFAULT_BACKUP_DIR
 class Database:
     """DuckDB-backed storage for discovery data."""
 
-    def __init__(self, db_path: Path | None = None, backup_manager: BackupManager | None = None):
+    def __init__(self, db_path: Path | None = None, backup_manager: BackupManager | None = None) -> None:
         self.db_path = db_path or DEFAULT_DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = duckdb.connect(str(self.db_path))
@@ -27,11 +28,16 @@ class Database:
         )
         self._init_schema()
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool:
         """Context manager exit."""
         self.close()
         return False

@@ -1,6 +1,7 @@
 """Tests for deduplication across imports and manual adds."""
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -13,12 +14,12 @@ from discovery.models import Category, Item, ItemSource, Source
 
 
 @pytest.fixture
-def runner():
+def runner() -> CliRunner:
     return CliRunner()
 
 
 @pytest.fixture
-def cli_db(tmp_path: Path, monkeypatch):
+def cli_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Database]:
     """Create a temporary database and patch the CLI to use it."""
     db_path = tmp_path / "test.db"
     import discovery.db as db_module
@@ -32,7 +33,7 @@ def cli_db(tmp_path: Path, monkeypatch):
 class TestImportDeduplication:
     """Test that importing the same data multiple times doesn't create duplicates."""
 
-    def test_reimport_same_file_no_duplicates(self, tmp_path: Path):
+    def test_reimport_same_file_no_duplicates(self, tmp_path: Path) -> None:
         """Importing the same file twice should not create duplicates."""
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)
@@ -64,7 +65,7 @@ class TestImportDeduplication:
 
         db.close()
 
-    def test_incremental_import_adds_only_new(self, tmp_path: Path):
+    def test_incremental_import_adds_only_new(self, tmp_path: Path) -> None:
         """Importing with new items should only add the new ones."""
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)
@@ -99,7 +100,7 @@ class TestImportDeduplication:
 
         db.close()
 
-    def test_cross_source_deduplication(self, tmp_path: Path):
+    def test_cross_source_deduplication(self, tmp_path: Path) -> None:
         """Items from different sources with same title/creator should be linked."""
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)
@@ -134,7 +135,7 @@ class TestImportDeduplication:
 
         db.close()
 
-    def test_fuzzy_fallback_dedup_when_search_misses(self, tmp_path: Path):
+    def test_fuzzy_fallback_dedup_when_search_misses(self, tmp_path: Path) -> None:
         """Fallback fuzzy scan should match when DB search returns no candidates."""
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)
@@ -172,7 +173,7 @@ class TestImportDeduplication:
 class TestManualAddDeduplication:
     """Test that manual adds don't create duplicates."""
 
-    def test_add_same_item_twice_rejected(self, runner: CliRunner, cli_db: Database):
+    def test_add_same_item_twice_rejected(self, runner: CliRunner, cli_db: Database) -> None:
         """Adding the same item twice should be rejected."""
         result1 = runner.invoke(cli, ["add", "The Matrix", "-c", "movie", "-a", "Wachowskis"])
         assert "Added:" in result1.output
@@ -184,7 +185,7 @@ class TestManualAddDeduplication:
         items = cli_db.get_items_by_category(Category.MOVIE)
         assert len(items) == 1
 
-    def test_add_same_title_different_creator_allowed(self, runner: CliRunner, cli_db: Database):
+    def test_add_same_title_different_creator_allowed(self, runner: CliRunner, cli_db: Database) -> None:
         """Same title with different creator should be allowed (different item)."""
         result1 = runner.invoke(cli, ["add", "Avatar", "-c", "movie", "-a", "James Cameron"])
         assert "Added:" in result1.output
@@ -198,7 +199,7 @@ class TestManualAddDeduplication:
         assert len(movies) == 1
         assert len(tv) == 1
 
-    def test_add_after_import_no_duplicate(self, runner: CliRunner, cli_db: Database, tmp_path: Path):
+    def test_add_after_import_no_duplicate(self, runner: CliRunner, cli_db: Database, tmp_path: Path) -> None:
         """Adding an item that was already imported should be rejected."""
         # Import a song
         data = {"tracks": [{"artist": "Pink Floyd", "album": "Dark Side", "track": "Money"}]}
@@ -217,7 +218,7 @@ class TestManualAddDeduplication:
         items = cli_db.get_items_by_category(Category.MUSIC)
         assert len(items) == 1
 
-    def test_case_insensitive_duplicate_detection(self, runner: CliRunner, cli_db: Database):
+    def test_case_insensitive_duplicate_detection(self, runner: CliRunner, cli_db: Database) -> None:
         """Duplicate detection should be case-insensitive."""
         result1 = runner.invoke(cli, ["add", "The Matrix", "-c", "movie"])
         assert "Added:" in result1.output
@@ -228,7 +229,7 @@ class TestManualAddDeduplication:
         items = cli_db.get_items_by_category(Category.MOVIE)
         assert len(items) == 1
 
-    def test_fuzzy_match_prompts_user(self, runner: CliRunner, cli_db: Database):
+    def test_fuzzy_match_prompts_user(self, runner: CliRunner, cli_db: Database) -> None:
         """Similar titles should prompt user with 'did you mean?'."""
         # Add an item first
         runner.invoke(cli, ["add", "Dark Souls", "-c", "game", "-a", "FromSoftware"])
@@ -240,7 +241,7 @@ class TestManualAddDeduplication:
         assert "Did you mean" in result.output
         assert "Dark Souls" in result.output
 
-    def test_fuzzy_match_user_selects_existing(self, runner: CliRunner, cli_db: Database):
+    def test_fuzzy_match_user_selects_existing(self, runner: CliRunner, cli_db: Database) -> None:
         """User can select existing item from fuzzy match prompt."""
         runner.invoke(cli, ["add", "The Matrix", "-c", "movie", "-a", "Wachowskis"])
 
@@ -259,7 +260,7 @@ class TestManualAddDeduplication:
         assert len(loved) == 1
         assert loved[0].title == "The Matrix"  # Original title preserved
 
-    def test_fuzzy_match_user_adds_new(self, runner: CliRunner, cli_db: Database):
+    def test_fuzzy_match_user_adds_new(self, runner: CliRunner, cli_db: Database) -> None:
         """User can choose to add as new item from fuzzy match prompt."""
         runner.invoke(cli, ["add", "Dark Knight", "-c", "movie"])
 
@@ -272,7 +273,7 @@ class TestManualAddDeduplication:
         items = cli_db.get_items_by_category(Category.MOVIE)
         assert len(items) == 2
 
-    def test_force_flag_bypasses_fuzzy_match(self, runner: CliRunner, cli_db: Database):
+    def test_force_flag_bypasses_fuzzy_match(self, runner: CliRunner, cli_db: Database) -> None:
         """Force flag should bypass fuzzy matching check."""
         runner.invoke(cli, ["add", "Dark Souls", "-c", "game"])
 
@@ -290,7 +291,7 @@ class TestManualAddDeduplication:
 class TestLoveDislikeDeduplication:
     """Test that love/dislike commands work on existing items."""
 
-    def test_love_imported_item(self, runner: CliRunner, cli_db: Database, tmp_path: Path):
+    def test_love_imported_item(self, runner: CliRunner, cli_db: Database, tmp_path: Path) -> None:
         """Loving an imported item should update it, not create new."""
         # Import an item
         data = {"tracks": [{"artist": "Artist", "album": "Album", "track": "Song"}]}
@@ -310,7 +311,7 @@ class TestLoveDislikeDeduplication:
         loved = cli_db.get_all_loved_items()
         assert len(loved) == 1
 
-    def test_dislike_imported_item(self, runner: CliRunner, cli_db: Database, tmp_path: Path):
+    def test_dislike_imported_item(self, runner: CliRunner, cli_db: Database, tmp_path: Path) -> None:
         """Disliking an imported item should update it, not create new."""
         # Import an item
         data = {"tracks": [{"artist": "Artist", "album": "Album", "track": "Bad Song"}]}
@@ -334,7 +335,7 @@ class TestLoveDislikeDeduplication:
 class TestFuzzyDeduplication:
     """Test fuzzy title matching for deduplication."""
 
-    def test_article_prefix_normalized(self, tmp_path: Path):
+    def test_article_prefix_normalized(self, tmp_path: Path) -> None:
         """'The Matrix' and 'Matrix' should be recognized as same."""
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)
@@ -349,7 +350,7 @@ class TestFuzzyDeduplication:
 
         db.close()
 
-    def test_case_insensitive_matching(self, tmp_path: Path):
+    def test_case_insensitive_matching(self, tmp_path: Path) -> None:
         """Case differences should not create duplicates."""
         db_path = tmp_path / "test.db"
         db = Database(db_path=db_path)

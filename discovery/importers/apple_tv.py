@@ -16,7 +16,7 @@ class AppleTVImporter(BaseImporter):
     source = Source.APPLE_TV
     category = Category.MOVIE
 
-    def __init__(self, db: Database):
+    def __init__(self, db: Database) -> None:
         super().__init__(db)
 
     def get_manual_steps(self) -> str:

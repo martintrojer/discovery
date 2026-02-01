@@ -26,7 +26,7 @@ class BaseImporter(ABC):
     source: Source
     category: Category
 
-    def __init__(self, db: Database):
+    def __init__(self, db: Database) -> None:
         self.db = db
 
     def create_item_pair(

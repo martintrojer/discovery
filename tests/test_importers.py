@@ -16,19 +16,19 @@ from discovery.utils import creators_match, normalize_title, titles_match
 class TestNormalizationUtilities:
     """Test the normalization and matching logic in utils module."""
 
-    def test_normalize_title_lowercase(self):
+    def test_normalize_title_lowercase(self) -> None:
         assert normalize_title("HELLO WORLD") == "hello world"
 
-    def test_normalize_title_removes_article_prefix(self):
+    def test_normalize_title_removes_article_prefix(self) -> None:
         assert normalize_title("The Matrix") == "matrix"
         assert normalize_title("A New Hope") == "new hope"
         assert normalize_title("An Example") == "example"
 
-    def test_normalize_title_removes_punctuation(self):
+    def test_normalize_title_removes_punctuation(self) -> None:
         assert normalize_title("Hello, World!") == "hello world"
         assert normalize_title("Test: Subtitle") == "test subtitle"
 
-    def test_normalize_title_removes_edition_markers(self):
+    def test_normalize_title_removes_edition_markers(self) -> None:
         # Parenthetical with "edition" keyword
         result = normalize_title("Album (Deluxe Edition)")
         assert result == "album"
@@ -36,68 +36,68 @@ class TestNormalizationUtilities:
         result = normalize_title("Song (Remastered)")
         assert result == "song"
 
-    def test_normalize_title_empty(self):
+    def test_normalize_title_empty(self) -> None:
         assert normalize_title("") == ""
 
-    def test_titles_match_exact(self):
+    def test_titles_match_exact(self) -> None:
         assert titles_match("Hello", "Hello") is True
         assert titles_match("Hello", "hello") is True
 
-    def test_titles_match_normalized(self):
+    def test_titles_match_normalized(self) -> None:
         assert titles_match("The Matrix", "Matrix") is True
         # Test substring matching (longer titles contain shorter)
         assert titles_match("Great Album", "Great Album Deluxe") is True
 
-    def test_titles_match_substring(self):
+    def test_titles_match_substring(self) -> None:
         assert titles_match("Dark Souls III", "Dark Souls") is True
         # Substring matching requires the shorter one to be at least 5 chars
         assert titles_match("Great Song", "Great Song Extended Mix") is True
 
-    def test_titles_match_short_substring_rejected(self):
+    def test_titles_match_short_substring_rejected(self) -> None:
         # Short substrings should not match
         assert titles_match("A", "A Song") is False
 
-    def test_titles_match_none(self):
+    def test_titles_match_none(self) -> None:
         assert titles_match(None, "Test") is False
         assert titles_match("Test", None) is False
 
-    def test_titles_match_numbered_sequels(self):
+    def test_titles_match_numbered_sequels(self) -> None:
         # Same base title with different numbering
         assert titles_match("Mass Effect 2", "Mass Effect 3") is True
         assert titles_match("Final Fantasy VII", "Final Fantasy X") is True
         assert titles_match("Dark Souls II", "Dark Souls III") is True
 
-    def test_titles_match_fuzzy_typos(self):
+    def test_titles_match_fuzzy_typos(self) -> None:
         # Fuzzy matching catches typos
         assert titles_match("The Witcher", "The Witchar") is True
         assert titles_match("Assassin's Creed", "Assassins Creed") is True
 
-    def test_titles_match_fuzzy_threshold(self):
+    def test_titles_match_fuzzy_threshold(self) -> None:
         # Very different titles should not match
         assert titles_match("Dark Souls", "Light Hearts") is False
         assert titles_match("The Matrix", "Frozen") is False
 
-    def test_creators_match_fuzzy_typos(self):
+    def test_creators_match_fuzzy_typos(self) -> None:
         # Fuzzy matching catches typos in creator names
         assert creators_match("Christopher Nolan", "Cristopher Nolan") is True
         assert creators_match("FromSoftware", "From Software") is True
 
-    def test_creators_match_different(self):
+    def test_creators_match_different(self) -> None:
         # Very different creators should not match
         assert creators_match("Steven Spielberg", "Martin Scorsese") is False
 
-    def test_creators_match_exact(self):
+    def test_creators_match_exact(self) -> None:
         assert creators_match("John Smith", "John Smith") is True
         assert creators_match("John Smith", "john smith") is True
 
-    def test_creators_match_contains(self):
+    def test_creators_match_contains(self) -> None:
         assert creators_match("John", "John Smith") is True
         assert creators_match("Smith", "John Smith") is True
 
-    def test_creators_match_last_name(self):
+    def test_creators_match_last_name(self) -> None:
         assert creators_match("John Smith", "Jane Smith") is True
 
-    def test_creators_match_none_is_match(self):
+    def test_creators_match_none_is_match(self) -> None:
         # Missing creator should match anything (aggressive dedup)
         assert creators_match(None, "John") is True
         assert creators_match("John", None) is True
@@ -109,7 +109,7 @@ class TestSpotifyImporter:
     def importer(self, db: Database) -> SpotifyImporter:
         return SpotifyImporter(db)
 
-    def test_parse_library_format(self, importer: SpotifyImporter, tmp_import_dir: Path):
+    def test_parse_library_format(self, importer: SpotifyImporter, tmp_import_dir: Path) -> None:
         data = {
             "tracks": [
                 {"artist": "Pink Floyd", "album": "Dark Side of the Moon", "track": "Money"},
@@ -128,7 +128,7 @@ class TestSpotifyImporter:
         assert item.metadata["album"] == "Dark Side of the Moon"
         assert source.source_loved is True  # Library tracks are loved
 
-    def test_parse_streaming_history(self, importer: SpotifyImporter, tmp_import_dir: Path):
+    def test_parse_streaming_history(self, importer: SpotifyImporter, tmp_import_dir: Path) -> None:
         data = [
             {
                 "ts": "2024-01-01",
@@ -172,7 +172,7 @@ class TestSpotifyImporter:
         assert item.metadata["play_count"] == 5
         assert source.source_loved is True  # 5 plays = loved
 
-    def test_get_manual_steps(self, importer: SpotifyImporter):
+    def test_get_manual_steps(self, importer: SpotifyImporter) -> None:
         steps = importer.get_manual_steps()
         assert "Spotify" in steps
         assert "Download" in steps
@@ -183,7 +183,7 @@ class TestNetflixImporter:
     def importer(self, db: Database) -> NetflixImporter:
         return NetflixImporter(db)
 
-    def test_parse_viewing_activity(self, importer: NetflixImporter, tmp_import_dir: Path):
+    def test_parse_viewing_activity(self, importer: NetflixImporter, tmp_import_dir: Path) -> None:
         csv_content = """Title,Date
 "Breaking Bad: Season 1: Pilot","2024-01-01"
 "The Office (U.S.): Season 1: Pilot","2024-01-02"
@@ -200,7 +200,7 @@ class TestNetflixImporter:
         assert "The Office (U.S.)" in titles
         assert "Some Movie" in titles
 
-    def test_import_ratings_csv(self, importer: NetflixImporter, tmp_import_dir: Path):
+    def test_import_ratings_csv(self, importer: NetflixImporter, tmp_import_dir: Path) -> None:
         csv_content = """Title,Date,Rating
 "Some Movie","2024-01-01","thumbs up"
 "Another Movie","2024-01-02","two thumbs up"
@@ -218,7 +218,7 @@ class TestNetflixImporter:
         assert rating.rating == 4
         assert rating.loved is True
 
-    def test_import_ratings_html(self, importer: NetflixImporter, tmp_import_dir: Path):
+    def test_import_ratings_html(self, importer: NetflixImporter, tmp_import_dir: Path) -> None:
         html_content = """
 <ul class="structural retable stdHeight">
   <li class="retableRow">
@@ -250,7 +250,7 @@ class TestGoodreadsImporter:
     def importer(self, db: Database) -> GoodreadsImporter:
         return GoodreadsImporter(db)
 
-    def test_parse_export(self, importer: GoodreadsImporter, tmp_import_dir: Path):
+    def test_parse_export(self, importer: GoodreadsImporter, tmp_import_dir: Path) -> None:
         csv_content = """Title,Author,My Rating,Date Read,Exclusive Shelf
 "The Name of the Wind","Patrick Rothfuss",5,2024-01-01,read
 "Some Book","Some Author",3,2024-01-02,read
@@ -272,7 +272,7 @@ class TestGoodreadsImporter:
 class TestImportFromFile:
     """Integration tests for the full import flow."""
 
-    def test_import_adds_items_and_sources(self, db: Database, tmp_import_dir: Path):
+    def test_import_adds_items_and_sources(self, db: Database, tmp_import_dir: Path) -> None:
         importer = SpotifyImporter(db)
 
         data = {"tracks": [{"artist": "Artist", "album": "Album", "track": "Song"}]}
@@ -290,7 +290,7 @@ class TestImportFromFile:
         assert len(items) == 1
         assert items[0].title == "Song"
 
-    def test_import_deduplicates_same_source(self, db: Database, tmp_import_dir: Path):
+    def test_import_deduplicates_same_source(self, db: Database, tmp_import_dir: Path) -> None:
         importer = SpotifyImporter(db)
 
         data = {"tracks": [{"artist": "Artist", "album": "Album", "track": "Song"}]}
@@ -309,7 +309,7 @@ class TestImportFromFile:
         items = db.get_items_by_category(Category.MUSIC)
         assert len(items) == 1
 
-    def test_import_handles_parse_error(self, db: Database, tmp_import_dir: Path):
+    def test_import_handles_parse_error(self, db: Database, tmp_import_dir: Path) -> None:
         importer = SpotifyImporter(db)
 
         file_path = tmp_import_dir / "invalid.json"

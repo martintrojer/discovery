@@ -10,6 +10,7 @@ from pathlib import Path
 import click
 
 from ..db import Database
+from ..importers.base import ImportResult
 from ..models import Category
 from ..utils import format_rating
 from .display_helpers import display_items_by_category, select_item
@@ -167,7 +168,7 @@ def import_steam(
     prune_wishlist_and_report(db, importer.category, "import steam")
 
 
-def _print_import_result(result) -> None:
+def _print_import_result(result: ImportResult) -> None:
     """Print import result summary."""
     click.echo(f"\nImport from {result.source.value} complete:")
     click.echo(f"  Added:   {result.items_added}")
