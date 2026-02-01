@@ -2,9 +2,9 @@
 
 from datetime import datetime
 
-from .db import Database
-from .models import Category, Item, ItemSource, Rating, Source
-from .utils import creators_match, normalize_title, titles_match
+from ..db import Database
+from ..models import Category, Item, ItemSource, Rating, Source
+from ..utils import creators_match, normalize_title, titles_match
 
 
 def find_similar_items(db: Database, title: str, category: Category, creator: str | None) -> list[Item]:

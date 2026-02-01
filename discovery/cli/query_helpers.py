@@ -1,7 +1,7 @@
 """Query command logic for Discovery CLI."""
 
-from .db import Database
-from .models import Category, Item
+from ..db import Database
+from ..models import Category, Item
 
 
 def query_items_with_filters(

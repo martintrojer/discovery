@@ -4,10 +4,10 @@ import json as json_module
 
 import click
 
-from ..cli_query import build_filter_description, format_items_as_json, query_items_with_filters
 from ..db import Database
 from ..models import Category
 from .core import cli
+from .query_helpers import build_filter_description, format_items_as_json, query_items_with_filters
 
 
 @cli.command()

@@ -9,11 +9,11 @@ from pathlib import Path
 
 import click
 
-from ..cli_items import create_item, find_similar_items, get_loved_status_from_flags, update_item_fields, upsert_rating
 from ..db import Database
 from ..models import Category
 from ..utils import format_rating
 from .display import display_items_by_category, select_item
+from .items import create_item, find_similar_items, get_loved_status_from_flags, update_item_fields, upsert_rating
 
 
 @click.group()
@@ -39,7 +39,7 @@ def status(ctx: click.Context, format: str) -> None:
     - Source breakdown
     - Sample loved items per category
     """
-    from ..cli_status import format_status_text, get_library_status
+    from .status import format_status_text, get_library_status
 
     db: Database = ctx.obj["db"]
 
