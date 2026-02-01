@@ -4,6 +4,7 @@ import importlib
 import json as json_module
 import sys
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
 import click
@@ -77,7 +78,12 @@ _FILE_IMPORTERS = {
 }
 
 
-def _create_file_import_command(name: str, module_name: str, class_name: str, docstring: str):
+def _create_file_import_command(
+    name: str,
+    module_name: str,
+    class_name: str,
+    docstring: str,
+) -> Callable[..., None]:
     """Create a file-based import command."""
 
     @import_cmd.command(name=name)
