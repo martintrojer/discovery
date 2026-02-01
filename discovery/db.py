@@ -605,8 +605,8 @@ class Database:
         results = self.conn.execute("""
             SELECT
                 i.category,
-                COUNT(*) as total,
-                COUNT(CASE WHEN r.loved = TRUE OR s.source_loved = TRUE THEN 1 END) as loved
+                COUNT(DISTINCT i.id) as total,
+                COUNT(DISTINCT CASE WHEN r.loved = TRUE OR s.source_loved = TRUE THEN i.id END) as loved
             FROM items i
             LEFT JOIN ratings r ON i.id = r.item_id
             LEFT JOIN item_sources s ON i.id = s.item_id
