@@ -23,7 +23,7 @@ from .items_helpers import (
 )
 
 
-@click.group()
+@click.group(context_settings={"show_default": True})
 @click.pass_context
 def cli(ctx: click.Context) -> None:
     """Discovery - Find new things you might love.
@@ -190,7 +190,7 @@ def _print_import_result(result: ImportResult) -> None:
     "-o",
     "output_path",
     type=click.Path(path_type=Path),
-    help="Output CSV path (default: same name with .csv)",
+    help="Output CSV path",
 )
 @click.option("--import", "do_import", is_flag=True, help="Import the generated CSV after scraping")
 @click.pass_context

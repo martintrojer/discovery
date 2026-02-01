@@ -19,7 +19,7 @@ from .query_helpers import build_filter_description, format_items_as_json, query
 @click.option("--min-rating", type=click.IntRange(1, 5), help="Minimum rating (1-5)")
 @click.option("--max-rating", type=click.IntRange(1, 5), help="Maximum rating (1-5)")
 @click.option("--search", "-s", help="Search title/creator")
-@click.option("--limit", "-n", type=int, default=QUERY_DEFAULT_LIMIT, help="Max items to show (default: 20)")
+@click.option("--limit", "-n", type=int, default=QUERY_DEFAULT_LIMIT, help="Max items to show")
 @click.option("--offset", type=int, default=0, help="Skip first N items (for pagination)")
 @click.option("--random", "-r", is_flag=True, help="Random sample instead of sorted")
 @click.option("--count", is_flag=True, help="Show only count, not items")
