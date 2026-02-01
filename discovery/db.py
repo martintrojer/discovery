@@ -627,6 +627,45 @@ class Database:
 
     # Advanced query operations
 
+    def _build_item_filters(
+        self,
+        category: Category | None,
+        loved: bool | None,
+        creator: str | None,
+        min_rating: int | None,
+        max_rating: int | None,
+        search: str | None,
+    ) -> tuple[str, list[Any]]:
+        sql = " WHERE 1=1"
+        params: list[Any] = []
+
+        if category:
+            sql += " AND i.category = ?"
+            params.append(category.value)
+
+        if loved is True:
+            sql += " AND (r.loved = TRUE OR s.source_loved = TRUE)"
+        elif loved is False:
+            sql += " AND r.loved = FALSE"
+
+        if creator:
+            sql += " AND i.creator ILIKE ?"
+            params.append(f"%{creator}%")
+
+        if min_rating:
+            sql += " AND r.rating >= ?"
+            params.append(min_rating)
+
+        if max_rating:
+            sql += " AND r.rating <= ?"
+            params.append(max_rating)
+
+        if search:
+            sql += " AND (i.title ILIKE ? OR i.creator ILIKE ?)"
+            params.extend([f"%{search}%", f"%{search}%"])
+
+        return sql, params
+
     def count_items(
         self,
         category: Category | None = None,
@@ -654,34 +693,16 @@ class Database:
             FROM items i
             LEFT JOIN ratings r ON i.id = r.item_id
             LEFT JOIN item_sources s ON i.id = s.item_id
-            WHERE 1=1
         """
-        params: list[Any] = []
-
-        if category:
-            sql += " AND i.category = ?"
-            params.append(category.value)
-
-        if loved is True:
-            sql += " AND (r.loved = TRUE OR s.source_loved = TRUE)"
-        elif loved is False:
-            sql += " AND r.loved = FALSE"
-
-        if creator:
-            sql += " AND i.creator ILIKE ?"
-            params.append(f"%{creator}%")
-
-        if min_rating:
-            sql += " AND r.rating >= ?"
-            params.append(min_rating)
-
-        if max_rating:
-            sql += " AND r.rating <= ?"
-            params.append(max_rating)
-
-        if search:
-            sql += " AND (i.title ILIKE ? OR i.creator ILIKE ?)"
-            params.extend([f"%{search}%", f"%{search}%"])
+        filter_sql, params = self._build_item_filters(
+            category=category,
+            loved=loved,
+            creator=creator,
+            min_rating=min_rating,
+            max_rating=max_rating,
+            search=search,
+        )
+        sql += filter_sql
 
         result = self.conn.execute(sql, params).fetchone()
         return result[0] if result else 0
@@ -719,34 +740,16 @@ class Database:
             FROM items i
             LEFT JOIN ratings r ON i.id = r.item_id
             LEFT JOIN item_sources s ON i.id = s.item_id
-            WHERE 1=1
         """
-        params: list[Any] = []
-
-        if category:
-            sql += " AND i.category = ?"
-            params.append(category.value)
-
-        if loved is True:
-            sql += " AND (r.loved = TRUE OR s.source_loved = TRUE)"
-        elif loved is False:
-            sql += " AND r.loved = FALSE"
-
-        if creator:
-            sql += " AND i.creator ILIKE ?"
-            params.append(f"%{creator}%")
-
-        if min_rating:
-            sql += " AND r.rating >= ?"
-            params.append(min_rating)
-
-        if max_rating:
-            sql += " AND r.rating <= ?"
-            params.append(max_rating)
-
-        if search:
-            sql += " AND (i.title ILIKE ? OR i.creator ILIKE ?)"
-            params.extend([f"%{search}%", f"%{search}%"])
+        filter_sql, params = self._build_item_filters(
+            category=category,
+            loved=loved,
+            creator=creator,
+            min_rating=min_rating,
+            max_rating=max_rating,
+            search=search,
+        )
+        sql += filter_sql
 
         if random:
             sql += " ORDER BY RANDOM()"
