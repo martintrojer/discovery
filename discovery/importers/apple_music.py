@@ -1,6 +1,5 @@
 """Apple Music library importer."""
 
-import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -92,8 +91,6 @@ songs in Apple Music to help with discovery recommendations.
             loved = track_data.get("Loved", False)
             play_count = track_data.get("Play Count", 0)
 
-            item_id = str(uuid.uuid4())
-
             metadata = {}
             if album:
                 metadata["album"] = album
@@ -102,19 +99,12 @@ songs in Apple Music to help with discovery recommendations.
             if year:
                 metadata["year"] = year
 
-            item = Item(
-                id=item_id,
-                category=Category.MUSIC,
+            item, item_source = self.create_item_pair(
                 title=title,
                 creator=artist,
-                metadata=metadata,
-            )
-
-            item_source = ItemSource(
-                item_id=item_id,
-                source=Source.APPLE_MUSIC,
                 source_id=track_id,
-                source_loved=loved,
+                loved=loved,
+                metadata=metadata,
                 source_data={
                     "play_count": play_count,
                     "album": album,

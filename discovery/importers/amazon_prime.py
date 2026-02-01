@@ -1,7 +1,6 @@
 """Amazon Prime Video importer."""
 
 import csv
-import uuid
 from pathlib import Path
 
 from ..db import Database
@@ -101,21 +100,12 @@ Use 'discovery love "title"' to mark favorites.
                     continue
                 seen_titles.add(title)
 
-                item_id = str(uuid.uuid4())
-
-                item = Item(
-                    id=item_id,
-                    category=category,
+                item, item_source = self.create_item_pair(
                     title=title,
                     creator=None,
-                    metadata={},
-                )
-
-                item_source = ItemSource(
-                    item_id=item_id,
-                    source=Source.AMAZON_PRIME,
                     source_id=title,
-                    source_loved=None,  # No rating in export
+                    category=category,
+                    metadata={},
                     source_data={"original_title": original_title},
                 )
 

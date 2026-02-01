@@ -3,7 +3,6 @@
 import json
 import plistlib
 import sqlite3
-import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -93,21 +92,12 @@ Use 'discovery love "podcast name"' to mark favorites.
             if not title:
                 continue
 
-            item_id = str(uuid.uuid4())
-
-            item = Item(
-                id=item_id,
-                category=Category.PODCAST,
+            item, item_source = self.create_item_pair(
                 title=title,
                 creator=None,
-                metadata={"feed_url": feed_url} if feed_url else {},
-            )
-
-            item_source = ItemSource(
-                item_id=item_id,
-                source=Source.APPLE_PODCASTS,
                 source_id=feed_url or title,
-                source_loved=None,  # Subscription doesn't mean loved
+                loved=None,  # Subscription doesn't mean loved
+                metadata={"feed_url": feed_url} if feed_url else {},
                 source_data={"feed_url": feed_url},
             )
 
@@ -131,21 +121,12 @@ Use 'discovery love "podcast name"' to mark favorites.
             if not title:
                 continue
 
-            item_id = str(uuid.uuid4())
-
-            item = Item(
-                id=item_id,
-                category=Category.PODCAST,
+            item, item_source = self.create_item_pair(
                 title=title,
                 creator=author,
-                metadata={},
-            )
-
-            item_source = ItemSource(
-                item_id=item_id,
-                source=Source.APPLE_PODCASTS,
                 source_id=title,
-                source_loved=podcast.get("favorite", None),
+                loved=podcast.get("favorite", None),
+                metadata={},
                 source_data={},
             )
 
@@ -170,21 +151,12 @@ Use 'discovery love "podcast name"' to mark favorites.
             if not title:
                 continue
 
-            item_id = str(uuid.uuid4())
-
-            item = Item(
-                id=item_id,
-                category=Category.PODCAST,
+            item, item_source = self.create_item_pair(
                 title=title,
                 creator=author,
-                metadata={},
-            )
-
-            item_source = ItemSource(
-                item_id=item_id,
-                source=Source.APPLE_PODCASTS,
                 source_id=title,
-                source_loved=None,
+                loved=None,
+                metadata={},
                 source_data={},
             )
 
@@ -296,21 +268,13 @@ Use 'discovery love "podcast name"' to mark favorites.
                     "loved_reason": loved_reason,
                 }
 
-                item_id = str(uuid.uuid4())
-                item = Item(
-                    id=item_id,
-                    category=Category.PODCAST,
+                source_id = podcast_uuid or feed_url or title
+                item, item_source = self.create_item_pair(
                     title=title,
                     creator=author,
-                    metadata={k: v for k, v in metadata.items() if v not in (None, "", {})},
-                )
-
-                source_id = podcast_uuid or feed_url or title
-                item_source = ItemSource(
-                    item_id=item_id,
-                    source=Source.APPLE_PODCASTS,
                     source_id=source_id,
-                    source_loved=loved,
+                    loved=loved,
+                    metadata={k: v for k, v in metadata.items() if v not in (None, "", {})},
                     source_data={
                         "uuid": podcast_uuid,
                         "feed_url": feed_url,

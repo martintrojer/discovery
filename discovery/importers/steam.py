@@ -1,7 +1,6 @@
 """Steam library importer."""
 
 import json
-import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -130,24 +129,15 @@ Steam Import Instructions
             # Consider "loved" if played more than 10 hours
             loved = playtime_hours >= 10
 
-            item_id = str(uuid.uuid4())
-
-            item = Item(
-                id=item_id,
-                category=Category.GAME,
+            item, item_source = self.create_item_pair(
                 title=name,
                 creator=None,  # Steam doesn't provide developer in this API
+                source_id=app_id,
+                loved=loved,
                 metadata={
                     "steam_appid": app_id,
                     "playtime_hours": round(playtime_hours, 1),
                 },
-            )
-
-            item_source = ItemSource(
-                item_id=item_id,
-                source=Source.STEAM,
-                source_id=app_id,
-                source_loved=loved,
                 source_data={
                     "playtime_minutes": playtime_minutes,
                     "playtime_2weeks": game.get("playtime_2weeks", 0),

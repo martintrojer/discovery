@@ -1,7 +1,6 @@
 """Spotify library importer."""
 
 import json
-import uuid
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -72,26 +71,17 @@ The YourLibrary.json contains your saved/liked tracks.
             if not title:
                 continue
 
-            item_id = str(uuid.uuid4())
-
             metadata = {}
             if album:
                 metadata["album"] = album
 
-            item = Item(
-                id=item_id,
-                category=Category.MUSIC,
+            # Saved to library = loved
+            item, item_source = self.create_item_pair(
                 title=title,
                 creator=artist,
-                metadata=metadata,
-            )
-
-            # Saved to library = loved
-            item_source = ItemSource(
-                item_id=item_id,
-                source=Source.SPOTIFY,
                 source_id=f"{artist}:{title}",
-                source_loved=True,
+                loved=True,
+                metadata=metadata,
                 source_data={"album": album},
             )
 
@@ -132,21 +122,12 @@ The YourLibrary.json contains your saved/liked tracks.
             # Consider loved if played more than 5 times or 10+ minutes total
             loved = count >= 5 or minutes_played >= 10
 
-            item_id = str(uuid.uuid4())
-
-            item = Item(
-                id=item_id,
-                category=Category.MUSIC,
+            item, item_source = self.create_item_pair(
                 title=title,
                 creator=artist,
-                metadata={"play_count": count, "minutes_played": round(minutes_played, 1)},
-            )
-
-            item_source = ItemSource(
-                item_id=item_id,
-                source=Source.SPOTIFY,
                 source_id=key,
-                source_loved=loved,
+                loved=loved,
+                metadata={"play_count": count, "minutes_played": round(minutes_played, 1)},
                 source_data={"play_count": count, "ms_played": play_time[key]},
             )
 

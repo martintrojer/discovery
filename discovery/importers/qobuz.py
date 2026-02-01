@@ -2,7 +2,6 @@
 
 import csv
 import json
-import uuid
 from pathlib import Path
 
 from ..db import Database
@@ -80,25 +79,16 @@ Option 3: Browser export (advanced)
                 if not title:
                     continue
 
-                item_id = str(uuid.uuid4())
-
                 metadata = {}
                 if album:
                     metadata["album"] = album
 
-                item = Item(
-                    id=item_id,
-                    category=Category.MUSIC,
+                item, item_source = self.create_item_pair(
                     title=title,
                     creator=artist,
-                    metadata=metadata,
-                )
-
-                item_source = ItemSource(
-                    item_id=item_id,
-                    source=Source.QOBUZ,
                     source_id=f"{artist}:{title}",
-                    source_loved=True,  # In favorites = loved
+                    loved=True,  # In favorites = loved
+                    metadata=metadata,
                     source_data={"album": album},
                 )
 
@@ -147,25 +137,16 @@ Option 3: Browser export (advanced)
             if not title:
                 continue
 
-            item_id = str(uuid.uuid4())
-
             metadata = {}
             if album:
                 metadata["album"] = album
 
-            item = Item(
-                id=item_id,
-                category=Category.MUSIC,
+            item, item_source = self.create_item_pair(
                 title=title,
                 creator=artist,
-                metadata=metadata,
-            )
-
-            item_source = ItemSource(
-                item_id=item_id,
-                source=Source.QOBUZ,
                 source_id=f"{artist}:{title}",
-                source_loved=True,
+                loved=True,
+                metadata=metadata,
                 source_data={"album": album},
             )
 

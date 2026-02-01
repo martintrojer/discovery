@@ -1,7 +1,6 @@
 """Goodreads library importer."""
 
 import csv
-import uuid
 from pathlib import Path
 
 from ..db import Database
@@ -68,8 +67,6 @@ The export includes:
                 # Consider "loved" if rated 4 or 5 stars
                 loved = rating_int >= 4
 
-                item_id = str(uuid.uuid4())
-
                 metadata = {
                     "shelf": exclusive_shelf,
                 }
@@ -85,19 +82,12 @@ The export includes:
                     except ValueError:
                         pass
 
-                item = Item(
-                    id=item_id,
-                    category=Category.BOOK,
+                item, item_source = self.create_item_pair(
                     title=title,
                     creator=author,
-                    metadata=metadata,
-                )
-
-                item_source = ItemSource(
-                    item_id=item_id,
-                    source=Source.GOODREADS,
                     source_id=book_id,
-                    source_loved=loved,
+                    loved=loved,
+                    metadata=metadata,
                     source_data={
                         "rating": rating_int,
                         "shelves": shelves.split(", ") if shelves else [],

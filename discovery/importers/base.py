@@ -1,5 +1,6 @@
 """Base importer class."""
 
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -28,6 +29,34 @@ class BaseImporter(ABC):
 
     def __init__(self, db: Database):
         self.db = db
+
+    def create_item_pair(
+        self,
+        title: str,
+        creator: str | None,
+        source_id: str,
+        loved: bool | None = None,
+        category: Category | None = None,
+        metadata: dict | None = None,
+        source_data: dict | None = None,
+    ) -> tuple[Item, ItemSource]:
+        """Create Item and ItemSource with proper IDs and defaults."""
+        item_id = str(uuid.uuid4())
+        item = Item(
+            id=item_id,
+            category=category or self.category,
+            title=title,
+            creator=creator,
+            metadata=metadata or {},
+        )
+        item_source = ItemSource(
+            item_id=item_id,
+            source=self.source,
+            source_id=source_id,
+            source_loved=loved,
+            source_data=source_data or {},
+        )
+        return item, item_source
 
     @abstractmethod
     def get_manual_steps(self) -> str:

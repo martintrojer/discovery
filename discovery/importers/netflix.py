@@ -1,7 +1,6 @@
 """Netflix viewing history importer."""
 
 import csv
-import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -92,25 +91,17 @@ Alternative - Ratings export:
                     continue
                 seen_titles.add(title)
 
-            item_id = str(uuid.uuid4())
-
-            item = Item(
-                id=item_id,
-                category=category,
+            # Netflix viewing history doesn't include loved status
+            # User will need to rate locally
+            item, item_source = self.create_item_pair(
                 title=title,
                 creator=None,  # Netflix doesn't include creator info
+                source_id=title,  # No unique ID, using title
+                loved=self._rating_to_loved(rating),
+                category=category,
                 metadata={
                     "source_format": source_format,
                 },
-            )
-
-            # Netflix viewing history doesn't include loved status
-            # User will need to rate locally
-            item_source = ItemSource(
-                item_id=item_id,
-                source=Source.NETFLIX,
-                source_id=title,  # No unique ID, using title
-                source_loved=self._rating_to_loved(rating),
                 source_data={
                     "first_watched": row.get("Start Time") or "",
                     "duration": row.get("Duration") or "",
