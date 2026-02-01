@@ -8,7 +8,7 @@ from typing import Any
 
 import duckdb
 
-from .models import Category, Item, ItemSource, Rating, Source, SyncState, WishlistItem
+from .models import Category, Item, ItemSource, Rating, Source, WishlistItem
 
 DEFAULT_DB_PATH = Path.home() / ".local" / "state" / "discovery" / "discovery.db"
 BACKUP_DIR = Path.home() / ".local" / "state" / "discovery" / "backups"
@@ -79,14 +79,6 @@ class Database:
                 creator TEXT,
                 notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS sync_state (
-                source TEXT PRIMARY KEY,
-                last_sync TIMESTAMP NOT NULL,
-                cursor TEXT
             )
         """)
 
@@ -566,37 +558,6 @@ class Database:
             return False
         self.conn.execute("DELETE FROM wishlist_items WHERE id = ?", [item_id])
         return True
-
-    # Sync state operations
-
-    def get_sync_state(self, source: Source) -> SyncState | None:
-        """Get sync state for a source."""
-        result = self.conn.execute(
-            "SELECT source, last_sync, cursor FROM sync_state WHERE source = ?",
-            [source.value],
-        ).fetchone()
-
-        if not result:
-            return None
-
-        return SyncState(
-            source=Source(result[0]),
-            last_sync=result[1],
-            cursor=result[2],
-        )
-
-    def update_sync_state(self, state: SyncState) -> None:
-        """Update sync state for a source."""
-        self.conn.execute(
-            """
-            INSERT INTO sync_state (source, last_sync, cursor)
-            VALUES (?, ?, ?)
-            ON CONFLICT (source) DO UPDATE SET
-                last_sync = EXCLUDED.last_sync,
-                cursor = EXCLUDED.cursor
-            """,
-            [state.source.value, state.last_sync, state.cursor],
-        )
 
     # Analytics queries
 

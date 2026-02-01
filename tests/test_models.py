@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from discovery.models import Category, Item, ItemSource, Rating, Source, SyncState, WishlistItem
+from discovery.models import Category, Item, ItemSource, Rating, Source, WishlistItem
 
 
 class TestCategory:
@@ -93,19 +93,6 @@ class TestRating:
         assert rating.loved is None
         assert rating.rating is None
         assert rating.notes is None
-
-
-class TestSyncState:
-    def test_create_sync_state(self):
-        now = datetime.now()
-        state = SyncState(
-            source=Source.STEAM,
-            last_sync=now,
-            cursor="page_2",
-        )
-        assert state.source == Source.STEAM
-        assert state.last_sync == now
-        assert state.cursor == "page_2"
 
 
 class TestWishlistItem:

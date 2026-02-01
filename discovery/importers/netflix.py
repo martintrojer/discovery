@@ -170,10 +170,6 @@ Alternative - Ratings export:
             except Exception as e:
                 errors.append(f"Failed to import '{item.title}': {e}")
 
-        from ..models import SyncState
-
-        self.db.update_sync_state(SyncState(source=self.source, last_sync=datetime.now()))
-
         return self._import_result(items_added, items_updated, errors)
 
     def _import_error(self, message: str):

@@ -3,7 +3,6 @@
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
 from ..db import Database
@@ -116,11 +115,6 @@ class BaseImporter(ABC):
 
             except Exception as e:
                 errors.append(f"Failed to import '{item.title}': {e}")
-
-        # Update sync state
-        from ..models import SyncState
-
-        self.db.update_sync_state(SyncState(source=self.source, last_sync=datetime.now()))
 
         return ImportResult(
             source=self.source,

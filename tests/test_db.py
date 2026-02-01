@@ -1,10 +1,9 @@
 """Unit tests for database layer."""
 
-from datetime import datetime
 from pathlib import Path
 
 from discovery.db import Database
-from discovery.models import Category, Item, ItemSource, Rating, Source, SyncState, WishlistItem
+from discovery.models import Category, Item, ItemSource, Rating, Source, WishlistItem
 
 
 class TestDatabaseInit:
@@ -235,22 +234,6 @@ class TestRatingOperations:
         retrieved = db.get_rating("item-1")
         assert retrieved is not None
         assert retrieved.rating == 5
-
-
-class TestSyncStateOperations:
-    def test_update_and_get_sync_state(self, db: Database):
-        now = datetime.now()
-        state = SyncState(source=Source.SPOTIFY, last_sync=now, cursor="page_5")
-        db.update_sync_state(state)
-
-        retrieved = db.get_sync_state(Source.SPOTIFY)
-        assert retrieved is not None
-        assert retrieved.source == Source.SPOTIFY
-        assert retrieved.cursor == "page_5"
-
-    def test_get_nonexistent_sync_state(self, db: Database):
-        result = db.get_sync_state(Source.STEAM)
-        assert result is None
 
 
 class TestWishlistOperations:

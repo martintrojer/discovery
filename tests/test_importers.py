@@ -9,7 +9,7 @@ from discovery.db import Database
 from discovery.importers.goodreads import GoodreadsImporter
 from discovery.importers.netflix import NetflixImporter
 from discovery.importers.spotify import SpotifyImporter
-from discovery.models import Category, Source
+from discovery.models import Category
 from discovery.utils import creators_match, normalize_title, titles_match
 
 
@@ -320,15 +320,3 @@ class TestImportFromFile:
         assert result.items_added == 0
         assert len(result.errors) == 1
         assert "Failed to parse" in result.errors[0]
-
-    def test_import_updates_sync_state(self, db: Database, tmp_import_dir: Path):
-        importer = SpotifyImporter(db)
-
-        data = {"tracks": []}
-        file_path = tmp_import_dir / "library.json"
-        file_path.write_text(json.dumps(data))
-
-        importer.import_from_file(file_path)
-
-        state = db.get_sync_state(Source.SPOTIFY)
-        assert state is not None

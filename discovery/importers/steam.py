@@ -1,13 +1,12 @@
 """Steam library importer."""
 
 import json
-from datetime import datetime
 from pathlib import Path
 
 import httpx
 
 from ..db import Database
-from ..models import Category, Item, ItemSource, Source, SyncState
+from ..models import Category, Item, ItemSource, Source
 from .base import BaseImporter, ImportResult
 
 
@@ -50,9 +49,6 @@ Steam Import Instructions
             data = json.load(f)
 
         return self._parse_games(data.get("response", {}).get("games", []))
-
-    def supports_incremental(self) -> bool:
-        return True
 
     def import_from_api(self) -> ImportResult:
         """Import directly from Steam API."""
@@ -102,9 +98,6 @@ Steam Import Instructions
 
                 except Exception as e:
                     errors.append(f"Failed to import '{item.title}': {e}")
-
-            # Update sync state
-            self.db.update_sync_state(SyncState(source=self.source, last_sync=datetime.now()))
 
         except httpx.HTTPError as e:
             errors.append(f"Steam API error: {e}")

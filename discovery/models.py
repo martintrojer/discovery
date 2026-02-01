@@ -86,12 +86,3 @@ class WishlistItem:
     creator: str | None = None
     notes: str | None = None
     created_at: datetime = field(default_factory=datetime.now)
-
-
-@dataclass
-class SyncState:
-    """Tracks sync progress for a source."""
-
-    source: Source
-    last_sync: datetime
-    cursor: str | None = None  # Source-specific position marker
