@@ -301,6 +301,35 @@ class TestAnalyticsQueries:
         assert stats["game"]["total"] == 1
         assert stats["game"]["loved"] == 0
 
+
+class TestAdvancedQueries:
+    def test_count_and_query_filters(self, db: Database) -> None:
+        db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song A", creator="Artist A"))
+        db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song B", creator="Artist B"))
+        db.upsert_item(Item(id="3", category=Category.GAME, title="Game A", creator="Studio A"))
+
+        db.upsert_rating(Rating(item_id="1", loved=True, rating=5))
+        db.upsert_rating(Rating(item_id="2", loved=False, rating=2))
+        db.upsert_item_source(ItemSource(item_id="3", source=Source.STEAM, source_id="steam:1", source_loved=True))
+
+        assert db.count_items(category=Category.MUSIC) == 2
+        assert db.count_items(loved=True) == 2
+        assert db.count_items(loved=False) == 1
+        assert db.count_items(creator="Artist A") == 1
+        assert db.count_items(search="Game") == 1
+        assert db.count_items(min_rating=4) == 1
+
+        items = db.query_items(category=Category.MUSIC, loved=False)
+        assert len(items) == 1
+        assert items[0].id == "2"
+
+    def test_query_limit_zero(self, db: Database) -> None:
+        db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song A"))
+        db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song B"))
+
+        items = db.query_items(limit=0)
+        assert items == []
+
     def test_get_source_stats(self, db: Database) -> None:
         db.upsert_item(Item(id="1", category=Category.MUSIC, title="Song 1"))
         db.upsert_item(Item(id="2", category=Category.MUSIC, title="Song 2"))
