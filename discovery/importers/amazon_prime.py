@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ..db import Database
 from ..models import Category, Item, ItemSource, Source
+from ..utils import detect_video_category
 from .base import BaseImporter
 
 
@@ -81,10 +82,9 @@ Use 'discovery love "title"' to mark favorites.
                 # Parse title - Amazon often includes episode info
                 # Format: "Show Name: Season X Episode Y" or "Show Name - S1E1"
                 original_title = title
-                category = Category.MOVIE
+                category = detect_video_category(title, content_type)
 
-                if ": Season" in title or " - S" in title or "Episode" in title.lower():
-                    category = Category.TV
+                if category == Category.TV:
                     # Extract show name
                     if ": Season" in title:
                         title = title.split(": Season")[0]
@@ -92,8 +92,6 @@ Use 'discovery love "title"' to mark favorites.
                         title = title.split(" - S")[0]
                     elif ": Episode" in title:
                         title = title.split(": Episode")[0]
-                elif content_type.lower() in ("tv", "series", "show"):
-                    category = Category.TV
 
                 # Deduplicate
                 if title in seen_titles:

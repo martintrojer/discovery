@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ..db import Database
 from ..models import Category, Item, ItemSource, Source
+from ..utils import detect_video_category
 from .base import BaseImporter
 
 
@@ -74,11 +75,8 @@ Use 'discovery love "title"' to mark favorites.
                 original_title = title
 
                 # Detect type
-                category = Category.MOVIE
-                if content_type in ("tv", "series", "episode", "show"):
-                    category = Category.TV
-                elif ": Season" in title or " - Episode" in title:
-                    category = Category.TV
+                category = detect_video_category(title, content_type)
+                if category == Category.TV:
                     if ": Season" in title:
                         title = title.split(": Season")[0]
 
@@ -119,9 +117,7 @@ Use 'discovery love "title"' to mark favorites.
             content_type = entry.get("type", entry.get("contentType", "")).lower()
             original_title = title
 
-            category = Category.MOVIE
-            if content_type in ("tv", "series", "episode"):
-                category = Category.TV
+            category = detect_video_category(title, content_type)
 
             if title in seen_titles:
                 continue

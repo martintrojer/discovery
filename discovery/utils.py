@@ -4,6 +4,8 @@ import re
 
 from rapidfuzz import fuzz
 
+from .models import Category
+
 # Display limits
 DEFAULT_DISPLAY_LIMIT = 10
 
@@ -202,3 +204,35 @@ def group_by_category(items: list) -> dict[str, list]:
     for item in items:
         by_category[item.category.value].append(item)
     return dict(by_category)
+
+
+def detect_video_category(title: str, content_type: str | None = None) -> Category:
+    """Detect if a video title is TV or Movie based on title patterns."""
+    normalized_type = (content_type or "").strip().lower()
+    if normalized_type in {"tv", "series", "episode", "show"}:
+        return Category.TV
+    if normalized_type in {"film", "movie"}:
+        return Category.MOVIE
+
+    title_lower = title.lower()
+    if any(
+        marker in title_lower
+        for marker in (
+            ": season",
+            " - season",
+            ": episode",
+            " - episode",
+            " episode",
+            " chapter",
+            " - s",
+            " s0",
+            " s1",
+            " s2",
+            " s3",
+            " s4",
+            " s5",
+        )
+    ):
+        return Category.TV
+
+    return Category.MOVIE

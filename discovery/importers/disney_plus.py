@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ..db import Database
 from ..models import Category, Item, ItemSource, Source
+from ..utils import detect_video_category
 from .base import BaseImporter
 
 
@@ -73,17 +74,14 @@ Use 'discovery love "title"' to mark favorites.
                 original_title = title
 
                 # Detect TV shows from title patterns
-                category = Category.MOVIE
-                if ": Season" in title or " S0" in title or " S1" in title:
-                    category = Category.TV
+                category = detect_video_category(title, content_type)
+                if category == Category.TV:
                     if ": Season" in title:
                         title = title.split(": Season")[0]
                     elif " S0" in title:
                         title = title.split(" S0")[0]
                     elif " S1" in title:
                         title = title.split(" S1")[0]
-                elif content_type in ("tv", "series", "episode"):
-                    category = Category.TV
 
                 if title in seen_titles:
                     continue

@@ -7,6 +7,7 @@ from pathlib import Path
 from ..db import Database
 from ..models import Category, Item, ItemSource, Rating, Source
 from ..scrapers.netflix_html import parse_netflix_ratings_html
+from ..utils import detect_video_category
 from .base import BaseImporter
 
 
@@ -62,31 +63,22 @@ Alternative - Ratings export:
 
             # Parse Netflix title format: "Show: Season X: Episode Title"
             # or just "Movie Title"
-            parts = title.split(": ")
-
-            if len(parts) >= 3 and "Season" in parts[1]:
-                # TV show episode
-                show_title = parts[0]
-                category = Category.TV
+            category = detect_video_category(title)
+            if category == Category.TV:
+                show_title = title
+                parts = title.split(": ")
+                if len(parts) >= 3 and "Season" in parts[1]:
+                    show_title = parts[0]
+                elif len(parts) >= 2 and ("Episode" in parts[1] or "Chapter" in parts[1]):
+                    show_title = parts[0]
 
                 # Deduplicate - only add show once
                 if show_title in seen_titles:
                     continue
                 seen_titles.add(show_title)
                 title = show_title
-            elif len(parts) >= 2 and ("Episode" in parts[1] or "Chapter" in parts[1]):
-                # Limited series or other format
-                show_title = parts[0]
-                category = Category.TV
-
-                if show_title in seen_titles:
-                    continue
-                seen_titles.add(show_title)
-                title = show_title
             else:
                 # Movie or standalone content
-                category = Category.MOVIE
-
                 if title in seen_titles:
                     continue
                 seen_titles.add(title)
