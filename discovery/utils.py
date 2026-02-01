@@ -6,6 +6,7 @@ from datetime import datetime
 from rapidfuzz import fuzz
 
 from .models import Category
+from .patterns import DIGIT_SUFFIX_RE, EDITION_PATTERNS, ROMAN_NUMERAL_SUFFIX_RE
 
 # Display limits
 DEFAULT_DISPLAY_LIMIT = 10
@@ -34,14 +35,7 @@ def normalize_title(title: str, strip_editions: bool = True) -> str:
 
     # Remove edition/version indicators BEFORE punctuation removal
     if strip_editions:
-        patterns = [
-            r"\s*\(.*?(edition|remaster|deluxe|version|expanded).*?\)\s*$",
-            r"\s*-\s*.*?(edition|remaster|deluxe|version|expanded).*$",
-            r"\s*:\s*.*?(edition|remaster|deluxe|version|expanded).*$",
-            r"\s+\(remastered\)\s*$",
-            r"\s+\(deluxe\)\s*$",
-        ]
-        for pattern in patterns:
+        for pattern in EDITION_PATTERNS:
             normalized = re.sub(pattern, "", normalized, flags=re.IGNORECASE)
 
     # Remove punctuation and extra whitespace
@@ -53,8 +47,8 @@ def normalize_title(title: str, strip_editions: bool = True) -> str:
 
 def strip_sequel_numbers(title: str) -> str:
     """Remove trailing sequel numbers/roman numerals."""
-    stripped = re.sub(r"\s+[ivxlcdm]+$", "", title, flags=re.IGNORECASE)
-    stripped = re.sub(r"\s+\d+$", "", stripped)
+    stripped = ROMAN_NUMERAL_SUFFIX_RE.sub("", title)
+    stripped = DIGIT_SUFFIX_RE.sub("", stripped)
     return stripped.strip()
 
 

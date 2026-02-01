@@ -4,15 +4,10 @@ from __future__ import annotations
 
 import csv
 import html as html_lib
-import re
 from pathlib import Path
 
+from ..patterns import NETFLIX_DATE_RE, NETFLIX_RATED_RE, NETFLIX_ROW_RE, NETFLIX_TITLE_RE
 from ..utils import parse_date
-
-_ROW_RE = re.compile(r'<li class="retableRow">(.*?)</li>', re.S)
-_DATE_RE = re.compile(r'<div class="col date nowrap">(.*?)</div>')
-_TITLE_RE = re.compile(r'<div class="col title">\s*<a href="[^"]+">(.*?)</a>')
-_RATED_RE = re.compile(r'aria-label="Already rated: (.*?)\(click to remove rating\)"')
 
 
 def parse_netflix_ratings_html(html_text: str) -> list[dict[str, str]]:
@@ -22,11 +17,11 @@ def parse_netflix_ratings_html(html_text: str) -> list[dict[str, str]]:
     """
     rows: list[dict[str, str]] = []
 
-    for match in _ROW_RE.finditer(html_text):
+    for match in NETFLIX_ROW_RE.finditer(html_text):
         block = match.group(1)
 
-        date_m = _DATE_RE.search(block)
-        title_m = _TITLE_RE.search(block)
+        date_m = NETFLIX_DATE_RE.search(block)
+        title_m = NETFLIX_TITLE_RE.search(block)
         if not title_m:
             continue
 
@@ -34,7 +29,7 @@ def parse_netflix_ratings_html(html_text: str) -> list[dict[str, str]]:
         title = html_lib.unescape(title_m.group(1).strip())
 
         rating_label = ""
-        rated_m = _RATED_RE.search(block)
+        rated_m = NETFLIX_RATED_RE.search(block)
         if rated_m:
             rating_label = html_lib.unescape(rated_m.group(1).strip())
 
