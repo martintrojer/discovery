@@ -4,7 +4,7 @@ from datetime import datetime
 
 from .db import Database
 from .models import Category, Item, ItemSource, Rating, Source
-from .utils import normalize_title
+from .utils import creators_match, normalize_title, titles_match
 
 
 def find_similar_items(db: Database, title: str, category: Category, creator: str | None) -> list[Item]:
@@ -27,40 +27,13 @@ def find_similar_items(db: Database, title: str, category: Category, creator: st
 
     similar = []
     for item in candidates:
-        normalized_item = normalize_title(item.title)
-        is_similar = False
-
-        # Exact normalized match
-        if normalized_input == normalized_item:
-            is_similar = True
-
-        # One contains the other (for subtitles, editions, etc.)
-        elif len(normalized_input) >= 5 and len(normalized_item) >= 5:
-            if normalized_input in normalized_item or normalized_item in normalized_input:
-                is_similar = True
-
-        # Common prefix (at least 60% of shorter string)
-        elif len(normalized_input) >= 5 and len(normalized_item) >= 5:
-            min_len = min(len(normalized_input), len(normalized_item))
-            prefix_len = 0
-            for a, b in zip(normalized_input, normalized_item, strict=False):
-                if a == b:
-                    prefix_len += 1
-                else:
-                    break
-            if prefix_len >= min_len * 0.6:
-                is_similar = True
-
-        # Creator match helps with similarity
-        if creator and item.creator:
-            creator_norm = creator.lower()
-            item_creator_norm = item.creator.lower()
-            if creator_norm in item_creator_norm or item_creator_norm in creator_norm:
-                if normalized_input[:4] == normalized_item[:4]:
-                    is_similar = True
-
-        if is_similar:
+        if titles_match(item.title, title, threshold=80):
             similar.append(item)
+            continue
+
+        if creator and item.creator:
+            if creators_match(creator, item.creator, threshold=90) and titles_match(item.title, title, threshold=70):
+                similar.append(item)
 
     return similar
 

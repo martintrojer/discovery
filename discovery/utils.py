@@ -48,6 +48,13 @@ def normalize_title(title: str, strip_editions: bool = True) -> str:
     return normalized.strip()
 
 
+def strip_sequel_numbers(title: str) -> str:
+    """Remove trailing sequel numbers/roman numerals."""
+    stripped = re.sub(r"\s+[ivxlcdm]+$", "", title, flags=re.IGNORECASE)
+    stripped = re.sub(r"\s+\d+$", "", stripped)
+    return stripped.strip()
+
+
 def titles_match(title1: str | None, title2: str | None, threshold: int = 85) -> bool:
     """Check if two titles match using fuzzy comparison.
 
@@ -85,14 +92,8 @@ def titles_match(title1: str | None, title2: str | None, threshold: int = 85) ->
 
     # 2. Numbered sequels: "Mass Effect 2" vs "Mass Effect II"
     #    Remove numbers and roman numerals for comparison
-    def strip_numbers(s: str) -> str:
-        # Remove trailing numbers and roman numerals
-        s = re.sub(r"\s+[ivxlcdm]+$", "", s, flags=re.IGNORECASE)
-        s = re.sub(r"\s+\d+$", "", s)
-        return s.strip()
-
-    stripped1 = strip_numbers(norm1)
-    stripped2 = strip_numbers(norm2)
+    stripped1 = strip_sequel_numbers(norm1)
+    stripped2 = strip_sequel_numbers(norm2)
     if stripped1 and stripped2 and stripped1 == stripped2:
         return True
 
@@ -103,6 +104,28 @@ def titles_match(title1: str | None, title2: str | None, threshold: int = 85) ->
         return True
 
     return False
+
+
+def titles_match_strict(title1: str | None, title2: str | None, threshold: int = 92) -> bool:
+    """Stricter title match for deduplication."""
+    if not title1 or not title2:
+        return False
+
+    norm1 = normalize_title(title1)
+    norm2 = normalize_title(title2)
+
+    if norm1 == norm2:
+        return True
+
+    if (norm1 in norm2 or norm2 in norm1) and min(len(norm1), len(norm2)) >= 5:
+        return True
+
+    stripped1 = strip_sequel_numbers(norm1)
+    stripped2 = strip_sequel_numbers(norm2)
+    if stripped1 and stripped2 and stripped1 == stripped2:
+        return True
+
+    return fuzz.token_set_ratio(norm1, norm2) >= threshold
 
 
 def creators_match(creator1: str | None, creator2: str | None, threshold: int = 80) -> bool:
