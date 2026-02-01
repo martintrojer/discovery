@@ -44,7 +44,8 @@ uv run discovery query -s "dark souls" -f json    # Search as JSON
 ## Wishlist
 
 Wishlist items are future-intent entries (things the user wants to watch/read/play/listen to). They are **per category** and should be treated as **unconsumed**. Use them to:
-- Avoid recommending items already on the wishlist
+- Do not remove or exclude wishlisted items from recommendations
+- If a recommended item is already on the wishlist, mention that explicitly in the results
 - Prefer recommending adjacent or complementary items
 - Suggest adding a recommendation to the wishlist when it’s a strong match
 
@@ -183,7 +184,7 @@ User: "Analyze my game taste"
 User: "Find me new music"
 1. Run `uv run discovery query -c music -l -n 50` for loved music
 2. Identify artists, genres, moods
-3. Run `uv run discovery wishlist view -c music` to avoid duplicates and refine taste
+3. Run `uv run discovery wishlist view -c music` to note any overlaps and refine taste
 3. Web search for similar artists and new releases
 4. Provide personalized recommendations with explanations
 5. If a rec is a standout match, ask if the user wants it added to the wishlist
