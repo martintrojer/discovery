@@ -216,6 +216,8 @@ Just type `/discovery` in Claude Code, then ask things like:
 - "What books should I read next?"
 - "Any new releases I'd enjoy?"
 
+Note: the Apple Music queue AppleScript workflow is library-scoped (`library playlist 1`), so it can only match tracks already present in your Music library metadata.
+
 ## Supported Sources
 
 | Category | Source | Import Method | Loved Tracking |

@@ -87,6 +87,15 @@ Tests use temporary DuckDB databases that are automatically cleaned up.
 
 The `/discovery` skill uses `discovery status`, `discovery query`, and `discovery wishlist view` for AI-powered analysis. No external API keys needed.
 
+### Apple Music AppleScript Limitation
+
+The Apple Music queue script (`.claude/skills/discovery/scripts/queue_apple_music.applescript`) searches `library playlist 1`, so it can only match tracks that are already present in your Music library metadata. It does not directly search the full Apple Music streaming catalog for unknown tracks.
+
+References:
+- Apple Support: adding music from Apple Music to your library is an explicit step: https://support.apple.com/en-us/ht204839
+- Apple Support: playlists can be separate from adding songs to library (depending on settings): https://support.apple.com/guide/music/create-edit-and-delete-playlists-musd5d051981/mac
+- MacScripter discussion of `library playlist` / `search` behavior in Music AppleScript: https://www.macscripter.net/t/music-app-from-text-file/73055
+
 ### Recent CLI Additions
 
 - `discovery scrape netflix-html ratings.html` converts Netflix ratings HTML to CSV (or `--import` to import directly).

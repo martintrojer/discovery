@@ -210,6 +210,8 @@ Use this workflow when the user asks to queue recommendations in Apple Music.
 
 **Trigger keyword**: `queue-playlist`
 
+Important: matching is library-scoped (`library playlist 1`), so this script only matches tracks already present in the user's Music library metadata.
+
 Also trigger this workflow when the user asks for playlist creation/queueing with phrases like:
 - "queue this in Apple Music"
 - "make me a playlist"
