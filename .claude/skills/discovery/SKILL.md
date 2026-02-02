@@ -203,3 +203,43 @@ User: "Any new releases I'd like?"
 4. Web search for recent releases matching taste
 5. Filter and present relevant new releases
 6. Ask to add standout picks to the wishlist
+
+## Apple Music Playlist Workflow
+
+Use this workflow when the user asks to queue recommendations in Apple Music.
+
+**Trigger keyword**: `queue-playlist`
+
+Also trigger this workflow when the user asks for playlist creation/queueing with phrases like:
+- "queue this in Apple Music"
+- "make me a playlist"
+- "use osascript to add tracks"
+
+### Steps
+
+1. Produce a CSV with header `artist,track`.
+2. Save it (for example `/tmp/playlist.csv`).
+3. Run the script:
+
+```bash
+osascript .claude/skills/discovery/scripts/queue_apple_music.applescript --csv /tmp/playlist.csv --playlist "Codex Queue"
+```
+
+### Matching Modes
+
+- Default (strict): safer matches, fewer substitutions.
+- Loose mode: higher recall, may substitute close tracks.
+
+```bash
+osascript .claude/skills/discovery/scripts/queue_apple_music.applescript --csv /tmp/playlist.csv --playlist "Codex Queue" --loose
+```
+
+Optional flags:
+- `--no-play` (build playlist without starting playback)
+- `--min-score N` (override match threshold)
+- `--strict` (explicit strict mode)
+
+After running, report:
+- Added track count
+- Missing track count and list
+- Notable substitutions (if any)
