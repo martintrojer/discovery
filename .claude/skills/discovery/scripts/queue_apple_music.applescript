@@ -1,5 +1,5 @@
 on run argv
-    set playlistName to "Codex Monday Morning Queue"
+    set playlistName to my defaultPlaylistName()
     set csvPath to missing value
     set shouldPlay to true
     set minScore to 90
@@ -40,6 +40,11 @@ on run argv
     set report to my queueTracks(trackSpecs, playlistName, shouldPlay, minScore, strictMode)
     return report
 end run
+
+on defaultPlaylistName()
+    set stampText to do shell script "date +%Y-%m-%d_%H-%M"
+    return "Discovery Queue " & stampText
+end defaultPlaylistName
 
 on queueTracks(trackSpecs, playlistName, shouldPlay, minScore, strictMode)
     set missingTracks to {}
