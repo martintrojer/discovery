@@ -91,7 +91,8 @@ def query(
             sources = db.get_item_sources(item.id)
             source_str = ",".join(s.source.value for s in sources) if sources else "manual"
             creator_str = f" - {item.creator}" if item.creator else ""
-            click.echo(f"  [{item.category.value:7}] [{source_str:10}] {item.title}{creator_str}")
+            metadata_str = f" | metadata: {json_module.dumps(item.metadata, sort_keys=True)}" if item.metadata else ""
+            click.echo(f"  [{item.category.value:7}] [{source_str:10}] {item.title}{creator_str}{metadata_str}")
 
         if offset + len(items) < total:
             next_offset = offset + limit

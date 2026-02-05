@@ -470,7 +470,7 @@ class TestQueryCommand:
         assert "--offset 10" in result.output
 
     def test_query_json_format(self, runner: CliRunner, cli_db: Database) -> None:
-        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song"))
+        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song", metadata={"album": "Test Album"}))
 
         result = runner.invoke(cli, ["query", "-f", "json"])
 
@@ -481,6 +481,15 @@ class TestQueryCommand:
         assert len(data["items"]) == 1
         assert "sources" in data["items"][0]
         assert "category" in data["items"][0]
+        assert data["items"][0]["metadata"] == {"album": "Test Album"}
+
+    def test_query_text_shows_metadata(self, runner: CliRunner, cli_db: Database) -> None:
+        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song", metadata={"album": "Test Album"}))
+
+        result = runner.invoke(cli, ["query"])
+
+        assert result.exit_code == 0
+        assert 'metadata: {"album": "Test Album"}' in result.output
 
     def test_query_search(self, runner: CliRunner, cli_db: Database) -> None:
         cli_db.upsert_item(Item(id="1", category=Category.GAME, title="Dark Souls"))
