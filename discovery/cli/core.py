@@ -457,6 +457,7 @@ def _create_backup_before_import(db: Database, source_name: str) -> None:
 
 from . import backups as _backups  # noqa: F401,E402
 from . import query as _query  # noqa: F401,E402
+from . import sql as _sql  # noqa: F401,E402
 from . import wishlist as _wishlist  # noqa: F401,E402
 
 

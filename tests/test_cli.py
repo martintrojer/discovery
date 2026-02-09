@@ -524,6 +524,38 @@ class TestQueryCommand:
         assert "Test Song" in result.output
 
 
+class TestSqlCommand:
+    def test_sql_select_text(self, runner: CliRunner, cli_db: Database) -> None:
+        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song"))
+
+        result = runner.invoke(cli, ["sql", "SELECT title FROM items ORDER BY title"])
+
+        assert result.exit_code == 0
+        assert "title" in result.output
+        assert "Test Song" in result.output
+        assert "Rows: 1" in result.output
+
+    def test_sql_select_json(self, runner: CliRunner, cli_db: Database) -> None:
+        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song"))
+
+        result = runner.invoke(cli, ["sql", "SELECT title FROM items ORDER BY title", "-f", "json"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["columns"] == ["title"]
+        assert data["rows"] == [["Test Song"]]
+        assert data["row_count"] == 1
+
+    def test_sql_rejects_non_read_only_statement(self, runner: CliRunner, cli_db: Database) -> None:
+        cli_db.upsert_item(Item(id="1", category=Category.MUSIC, title="Test Song"))
+
+        result = runner.invoke(cli, ["sql", "DELETE FROM items"])
+
+        assert result.exit_code != 0
+        assert "Only read-only SQL is allowed" in result.output
+        assert cli_db.count_items() == 1
+
+
 class TestImportCommands:
     def test_import_help_setup(self, runner: CliRunner, cli_db: Database, tmp_path: Path) -> None:
         # Create a dummy file since the argument is required

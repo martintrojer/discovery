@@ -41,6 +41,14 @@ uv run discovery query -c movie -r -n 10          # 10 random movies
 uv run discovery query -s "dark souls" -f json    # Search as JSON
 ```
 
+For custom analysis across joins and aggregates, use SQL:
+
+```bash
+uv run discovery sql "SELECT category, COUNT(*) AS n FROM items GROUP BY category ORDER BY n DESC"
+uv run discovery sql "SELECT i.title, i.creator, r.rating FROM items i JOIN ratings r ON i.id = r.item_id WHERE r.loved = TRUE ORDER BY r.rating DESC, i.title LIMIT 20"
+uv run discovery sql "SELECT * FROM items LIMIT 5" -f json
+```
+
 ## Wishlist
 
 Wishlist items are future-intent entries (things the user wants to watch/read/play/listen to). They are **per category** and should be treated as **unconsumed**. Use them to:
@@ -88,6 +96,30 @@ The `query` command is the primary way to explore the library.
 3. If > 200 loved items, prefer random sampling with a size limit: `discovery query -l -r -n 100`
 4. Use category filters to focus: `discovery query -c game -l`
 5. When a size limit is required for loved items, use random sampling: `discovery query -c music -l -r -n 20`
+
+## SQL Command Reference
+
+The `sql` command is for ad-hoc, read-only database inspection.
+
+**Usage:**
+- `discovery sql "SELECT ..."` - Run a SQL statement
+- `-f, --format` - Output format (`text` or `json`)
+
+**Safety constraints:**
+- Only read-only statements are allowed.
+- Allowed prefixes: `SELECT`, `WITH`, `SHOW`, `DESCRIBE`, `EXPLAIN`
+
+**Useful tables:**
+- `items`
+- `ratings`
+- `item_sources`
+- `wishlist_items`
+
+**Examples:**
+- `discovery sql "SELECT COUNT(*) FROM items"`
+- `discovery sql "SELECT category, COUNT(*) FROM items GROUP BY category ORDER BY 2 DESC"`
+- `discovery sql "SELECT source, COUNT(*) FROM item_sources GROUP BY source ORDER BY 2 DESC"`
+- `discovery sql "SELECT i.category, AVG(r.rating) AS avg_rating FROM items i JOIN ratings r ON i.id = r.item_id WHERE r.rating IS NOT NULL GROUP BY i.category ORDER BY avg_rating DESC"`
 
 ## Available Actions
 
