@@ -41,6 +41,11 @@ uv run discovery query -c movie -r -n 10          # 10 random movies
 uv run discovery query -s "dark souls" -f json    # Search as JSON
 ```
 
+Concurrency note:
+- Run `discovery` commands sequentially (one process at a time).
+- Do not run multiple `discovery query`/`status`/`sql` commands in parallel.
+- The DuckDB file can hold a single writer lock and parallel CLI processes may fail with lock errors.
+
 For custom analysis across joins and aggregates, use SQL:
 
 ```bash
